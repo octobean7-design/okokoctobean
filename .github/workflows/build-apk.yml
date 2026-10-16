@@ -18,15 +18,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install dependencies & Build APK
+      - name: Build Debug APK
         run: |
-          npm install
-          npx cap sync
           chmod +x gradlew
           ./gradlew assembleDebug
 
