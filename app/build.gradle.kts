@@ -7,39 +7,26 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "ru.bezpaniki.driver"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 28
-        versionName = "2.8.0-PRO"
-    }
-
-    signingConfigs {
-        create("releaseKey") {
-            storeFile = file("bezpaniki-release.jks")
-            storePassword = "BezPaniki2026"
-            keyAlias = "bezpaniki_key"
-            keyPassword = "BezPaniki2026"
-            enableV1Signing = true
-            enableV2Signing = true
-        }
+        applicationId = "ru.bezpaniki.assistant"
+        minSdk = 21
+        targetSdk = 33
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     buildTypes {
         getByName("debug") {
-            isDebuggable = false
-            signingConfig = signingConfigs.getByName("releaseKey")
+            // Uses official Android SDK auto-generated V1+V2+V3 debug signature
         }
         getByName("release") {
-            isDebuggable = false
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("releaseKey")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 }
 
