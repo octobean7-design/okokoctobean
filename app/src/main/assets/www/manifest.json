@@ -1,0 +1,11 @@
+{
+  "name": "Без паники — Карманный помощник водителя",
+  "short_name": "Без паники",
+  "description": "Интерактивная офлайн-шпаргалка для водителей: гараж, маневры в городе, ЧП и ДТП",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "lang": "ru-RU"
+}

@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Без паники — Карманный помощник водителя (Android / PWA)</title>
+    <meta name="theme-color" content="#0f1117">
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #090b10;
+            color: #f3f4f6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a3042;
+            border-radius: 9999px;
+        }
+        .tap-card {
+            transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s ease, background-color 0.15s ease;
+        }
+        .tap-card:active {
+            transform: scale(0.985);
+        }
+        @keyframes pulseAlert {
+            0%, 100% { background-color: #dc2626; color: #ffffff; }
+            50% { background-color: #f59e0b; color: #000000; }
+        }
+        .strobe-active {
+            animation: pulseAlert 0.55s infinite;
+        }
+        .android-shadow {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.07);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start sm:py-4">
+
+    <!-- Верхняя панель управления прототипом -->
+    <div class="w-full max-w-4xl px-3 pt-2 pb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-medium border border-emerald-500/30">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Android PWA • 100% Офлайн
+            </span>
+            <span class="hidden sm:inline text-slate-400">Коммерческий прототип v2.4</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btnToggleFrame" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition font-medium">
+                📱 Вид: Смартфон / Широкий
+            </button>
+            <button id="btnOpenCommercialModal" type="button" class="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 transition font-medium">
+                📦 Сборка APK и RuStore
+            </button>
+        </div>
+    </div>
+
+    <!-- Главный контейнер приложения -->
+    <div id="appShell" class="w-full max-w-md sm:rounded-[28px] bg-[#0f1117] android-shadow border border-[#242938] flex flex-col min-h-[calc(100vh-3rem)] sm:min-h-[780px] relative overflow-hidden transition-all duration-200">
+
+        <!-- Имитация статус-бара Android -->
+        <div class="px-5 pt-2.5 pb-1.5 bg-[#0f1117] flex items-center justify-between text-[11px] text-slate-400 select-none border-b border-slate-800/60">
+            <div class="flex items-center gap-2 font-semibold text-slate-300">
+                <span id="statusBarClock">16:25</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-medium">OFFLINE READY</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span>GPS • LTE</span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">98%</span>
+            </div>
+        </div>
+
+        <!-- Шапка приложения -->
+        <header class="px-4 pt-3 pb-3 bg-[#141821] border-b border-[#242938] sticky top-0 z-20">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-xl shadow-md shadow-blue-900/40 border border-blue-400/30">
+                        🚗
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h1 class="text-lg font-extrabold tracking-tight text-white leading-none">Без паники</h1>
+                            <span id="proBadgeHeader" class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">PRO</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Карманная шпаргалка водителя</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="btnParkingCardQuick" type="button" title="Парковочная визитка на лобовое стекло" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1">
+                        <span>🅿️</span>
+                        <span class="hidden sm:inline">Визитка</span>
+                    </button>
+                    <button id="btnEmergencyQuick" type="button" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow-md shadow-red-900/40 flex items-center gap-1">
+                        <span>🚨</span>
+                        <span>SOS</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Строка быстрого поиска -->
+            <div class="mt-3 relative">
+                <input id="globalSearchInput" type="text" placeholder="Поиск ситуации: кольцо, парковка, закипел, ДПС..." class="w-full bg-[#0f1117] text-sm text-white placeholder-slate-500 rounded-xl pl-9 pr-8 py-2.5 border border-[#2a3042] focus:outline-none focus:border-blue-500 transition">
+                <span class="absolute left-3 top-2.5 text-slate-500 text-sm pointer-events-none">🔍</span>
+                <button id="btnClearSearch" type="button" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-white px-1.5 py-0.5 text-xs rounded bg-slate-800">✕</button>
+            </div>
+        </header>
+
+        <!-- Основная прокручиваемая область контента -->
+        <main id="mainContentArea" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+
+            <!-- ================= ВЬЮ 1: ГЛАВНАЯ + КАТАЛОГ СИТУАЦИЙ ================= -->
+            <section id="viewHome" class="space-y-4">
+
+                <!-- Мини-виджет «Моё авто» -->
+                <div class="p-3.5 rounded-2xl bg-gradient-to-r from-[#181d29] to-[#1d2436] border border-[#2d364d] flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-blue-400">Моё авто</span>
+                            <span id="summaryCarPlate" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-900/90 text-slate-200 border border-slate-700">А 777 АА 777</span>
+                        </div>
+                        <div id="summaryCarModel" class="text-sm font-bold text-white truncate mt-0.5">Kia Rio / Hyundai Solaris</div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300 mt-1.5">
+                            <span class="inline-flex items-center gap-1"><strong class="text-slate-400">Бак:</strong> <span id="summaryFuelSide" class="text-amber-300 font-semibold">◀ Слева</span></span>
+                            <span class="inline-flex items-center gap-1"><strong class="text-slate-400">Топливо:</strong> <span id="summaryFuelType" class="text-emerald-300 font-semibold">АИ-95</span></span>
+                            <span class="inline-flex items-center gap-1"><strong class="text-slate-400">Шины:</strong> <span id="summaryTirePressure" class="text-blue-300 font-semibold">2.2 бар</span></span>
+                        </div>
+                    </div>
+                    <button id="btnGoToMyCar" type="button" class="shrink-0 px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-semibold">
+                        Изменить →
+                    </button>
+                </div>
+
+                <!-- 3 главные категории -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Выберите ситуацию</h2>
+                        <button id="btnResetCategoryFilter" type="button" class="hidden text-xs font-semibold text-blue-400 hover:underline">Показать все (16)</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button type="button" data-cat-btn="garage" class="cat-filter-btn tap-card text-left p-3.5 rounded-2xl bg-[#181b24] hover:bg-[#212634] border border-[#2a3042] flex sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5">
+                            <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
+                                🚘
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-1">
+                                    <h3 class="text-base font-bold text-white">В гараже</h3>
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">5 тем</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5 line-clamp-2">Чек-лист выезда, зеркала, заправка, шины, зима</p>
+                            </div>
+                        </button>
+
+                        <button type="button" data-cat-btn="city" class="cat-filter-btn tap-card text-left p-3.5 rounded-2xl bg-[#181b24] hover:bg-[#212634] border border-[#2a3042] flex sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5">
+                            <div class="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-2xl shrink-0">
+                                🛣️
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-1">
+                                    <h3 class="text-base font-bold text-white">В городе</h3>
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">6 тем</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5 line-clamp-2">Кольца, парковка (схемы), левый поворот, поток</p>
+                            </div>
+                        </button>
+
+                        <button type="button" data-cat-btn="emergency" class="cat-filter-btn tap-card text-left p-3.5 rounded-2xl bg-[#271519] hover:bg-[#321a20] border border-red-500/40 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5">
+                            <div class="w-11 h-11 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl shrink-0">
+                                🚨
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-1">
+                                    <h3 class="text-base font-bold text-red-100">Я в беде! (ЧП)</h3>
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500/30 text-red-200">5 тем</span>
+                                </div>
+                                <p class="text-xs text-red-200/80 mt-0.5 line-clamp-2">ДТП по шагам, ДПС, прокол, перегрев, АКБ</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Быстрые интерактивные инструменты прототипа -->
+                <div class="p-3.5 rounded-2xl bg-[#181b24] border border-[#2a3042]">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Быстрые инструменты</span>
+                        <span class="text-[11px] text-emerald-400 font-medium">Интерактивно</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btnQuickChecklist" type="button" class="tap-card p-2.5 rounded-xl bg-[#0f1117] hover:bg-slate-800 border border-[#2a3042] flex items-center gap-2.5 text-left">
+                            <span class="text-xl">✅</span>
+                            <div>
+                                <div class="text-xs font-bold text-white">Чек-лист старта</div>
+                                <div id="quickChecklistStatus" class="text-[11px] text-emerald-400">Готовность: 0/8</div>
+                            </div>
+                        </button>
+                        <button id="btnQuickDashboard" type="button" class="tap-card p-2.5 rounded-xl bg-[#0f1117] hover:bg-slate-800 border border-[#2a3042] flex items-center gap-2.5 text-left">
+                            <span class="text-xl">⚠️</span>
+                            <div>
+                                <div class="text-xs font-bold text-white">Значки приборки</div>
+                                <div class="text-[11px] text-amber-400">12 индикаторов</div>
+                            </div>
+                        </button>
+                        <button id="btnQuickEuroprotocol" type="button" class="tap-card p-2.5 rounded-xl bg-[#0f1117] hover:bg-slate-800 border border-[#2a3042] flex items-center gap-2.5 text-left">
+                            <span class="text-xl">📋</span>
+                            <div>
+                                <div class="text-xs font-bold text-white">Европротокол?</div>
+                                <div class="text-[11px] text-blue-400">Тест за 15 сек</div>
+                            </div>
+                        </button>
+                        <button id="btnQuickStrobe" type="button" class="tap-card p-2.5 rounded-xl bg-[#0f1117] hover:bg-slate-800 border border-[#2a3042] flex items-center gap-2.5 text-left">
+                            <span class="text-xl">🔦</span>
+                            <div>
+                                <div class="text-xs font-bold text-white">Маячок SOS</div>
+                                <div class="text-[11px] text-red-400">Сигнал на дороге</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Интерактивный виджет «Чек-лист перед выездом» -->
+                <div id="checklistWidgetBox" class="p-4 rounded-2xl bg-[#181b24] border border-emerald-500/40 space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Гараж • Перед стартом</span>
+                            <h3 class="text-base font-bold text-white mt-1">Чек-лист перед выездом (за 60 сек)</h3>
+                        </div>
+                        <button id="btnResetChecklist" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700">
+                            Сбросить
+                        </button>
+                    </div>
+                    <div class="w-full bg-[#0f1117] h-2.5 rounded-full overflow-hidden border border-slate-800">
+                        <div id="checklistProgressBar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div id="checklistItemsContainer" class="space-y-1.5"></div>
+                </div>
+
+                <!-- Список карточек ситуаций -->
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h2 id="guidesSectionTitle" class="text-sm font-bold text-white">Все шпаргалки и алгоритмы (16)</h2>
+                        <span id="guidesCountBadge" class="text-xs text-slate-400">Нажмите на карточку для открытия</span>
+                    </div>
+                    <div id="guidesListContainer" class="space-y-2.5"></div>
+                </div>
+            </section>
+
+            <!-- ================= ВЬЮ 2: ПРИБОРНАЯ ПАНЕЛЬ (ИНДИКАТОРЫ) ================= -->
+            <section id="viewDashboard" class="hidden space-y-4">
+                <div class="p-4 rounded-2xl bg-[#181b24] border border-[#2a3042]">
+                    <h2 class="text-base font-bold text-white">Что загорелось на приборной панели?</h2>
+                    <p class="text-xs text-slate-400 mt-1">Выберите цвет значка или нажмите на иконку, чтобы узнать, можно ли продолжать движение.</p>
+
+                    <div class="grid grid-cols-3 gap-2 mt-3">
+                        <button type="button" data-dash-filter="all" class="dash-filter-btn px-2.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold text-center">
+                            Все (12)
+                        </button>
+                        <button type="button" data-dash-filter="red" class="dash-filter-btn px-2.5 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 text-xs font-bold text-center">
+                            🔴 СТОП (4)
+                        </button>
+                        <button type="button" data-dash-filter="yellow" class="dash-filter-btn px-2.5 py-2 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold text-center">
+                            🟡 Внимание (6)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="selectedIndicatorDetail" class="p-4 rounded-2xl bg-gradient-to-br from-[#1e2230] to-[#181b24] border border-blue-500/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span id="indBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40">🔴 КРАСНЫЙ — СТОП</span>
+                        <span class="text-xs text-slate-400">Нажмите на значок ниже</span>
+                    </div>
+                    <div class="flex items-center gap-3 pt-1">
+                        <div id="indSymbol" class="w-14 h-14 rounded-2xl bg-[#0f1117] border border-slate-700 flex items-center justify-center text-3xl shrink-0">
+                            🛢️
+                        </div>
+                        <div>
+                            <h3 id="indTitle" class="text-base font-bold text-white">Низкое давление масла («Масленка»)</h3>
+                            <p id="indVerdict" class="text-xs font-bold text-red-400 mt-0.5">Ехать НЕЛЬЗЯ! Немедленно остановитесь и заглушите мотор.</p>
+                        </div>
+                    </div>
+                    <p id="indAction" class="text-xs text-slate-300 leading-relaxed pt-1 border-t border-slate-800">
+                        Двигатель работает без смазки и может заклинить за 1–2 минуты. Съедьте на обочину, заглушите мотор, подождите 5 минут и проверьте уровень масла щупом. Если уровень в норме, а лампа горит — вызывайте эвакуатор.
+                    </p>
+                </div>
+
+                <div id="indicatorsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+            </section>
+
+            <!-- ================= ВЬЮ 3: SOS / ПОМОЩНИК ПРИ ДТП И ЕВРОПРОТОКОЛ ================= -->
+            <section id="viewSos" class="hidden space-y-4">
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#2b1419] to-[#1c1217] border border-red-500/40 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-red-500/30 text-red-200">Экстренный режим</span>
+                            <h2 class="text-base font-bold text-white mt-1">Вдох-выдох. Главное — люди целы</h2>
+                        </div>
+                        <button id="btnToggleStrobe" type="button" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow">
+                            🔦 Маячок экрана
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <a href="tel:112" class="tap-card p-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-950/60">
+                            <span class="text-xl">📞</span>
+                            <div class="text-left">
+                                <div class="text-sm leading-none">Вызов 112</div>
+                                <div class="text-[10px] text-red-100 font-normal mt-0.5">Единая служба спасения</div>
+                            </div>
+                        </a>
+                        <a href="tel:102" class="tap-card p-3 rounded-xl bg-[#181b24] hover:bg-slate-800 text-white font-bold border border-slate-700 flex items-center justify-center gap-2">
+                            <span class="text-xl">🚓</span>
+                            <div class="text-left">
+                                <div class="text-sm leading-none">Вызов 102</div>
+                                <div class="text-[10px] text-slate-400 font-normal mt-0.5">Полиция / ГИБДД</div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <button id="btnCopy112Script" type="button" class="w-full py-2 px-3 rounded-xl bg-black/40 hover:bg-black/60 text-xs text-red-200 border border-red-500/30 flex items-center justify-between">
+                        <span>💬 Что говорить диспетчеру 112 (скопировать шаблон)</span>
+                        <span class="font-bold">Копировать</span>
+                    </button>
+                </div>
+
+                <!-- Пошаговый интерактивный визард при ДТП -->
+                <div class="p-4 rounded-2xl bg-[#181b24] border border-[#2a3042] space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white">Пошаговый алгоритм при ДТП (ПДД п. 2.5)</h3>
+                        <button id="btnResetDtpSteps" type="button" class="text-xs text-slate-400 hover:text-white">Сбросить</button>
+                    </div>
+                    <div id="dtpStepsContainer" class="space-y-2"></div>
+                </div>
+
+                <!-- Интерактивный калькулятор «Европротокол или ГИБДД?» -->
+                <div class="p-4 rounded-2xl bg-[#181b24] border border-blue-500/40 space-y-3">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">Проверка за 15 секунд</span>
+                        <h3 class="text-base font-bold text-white mt-1">Можно ли оформить Европротокол без ГИБДД?</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Отметьте условия вашего ДТП:</p>
+                    </div>
+
+                    <div class="space-y-2" id="euroQuestionsList">
+                        <label class="flex items-center justify-between p-2.5 rounded-xl bg-[#0f1117] border border-slate-800 cursor-pointer">
+                            <span class="text-xs text-slate-200 pr-2">1. Столкнулись ровно 2 автомобиля (без прицепов и столбов)?</span>
+                            <input type="checkbox" class="euro-check w-5 h-5 accent-blue-500 rounded" data-q="twoCars" checked>
+                        </label>
+                        <label class="flex items-center justify-between p-2.5 rounded-xl bg-[#0f1117] border border-slate-800 cursor-pointer">
+                            <span class="text-xs text-slate-200 pr-2">2. Нет пострадавших людей (водителей, пассажиров, пешеходов)?</span>
+                            <input type="checkbox" class="euro-check w-5 h-5 accent-blue-500 rounded" data-q="noInjured" checked>
+                        </label>
+                        <label class="flex items-center justify-between p-2.5 rounded-xl bg-[#0f1117] border border-slate-800 cursor-pointer">
+                            <span class="text-xs text-slate-200 pr-2">3. У обоих водителей есть действующий полис ОСАГО?</span>
+                            <input type="checkbox" class="euro-check w-5 h-5 accent-blue-500 rounded" data-q="bothOsago" checked>
+                        </label>
+                        <label class="flex items-center justify-between p-2.5 rounded-xl bg-[#0f1117] border border-slate-800 cursor-pointer">
+                            <span class="text-xs text-slate-200 pr-2">4. Оба водителя согласны, кто виноват, и ущерб до 400 000 ₽?</span>
+                            <input type="checkbox" class="euro-check w-5 h-5 accent-blue-500 rounded" data-q="noDispute" checked>
+                        </label>
+                    </div>
+
+                    <div id="euroVerdictBox" class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs space-y-1">
+                        <div class="font-bold text-emerald-300 text-sm">✅ Можно оформить Европротокол (лимит до 400 000 ₽)</div>
+                        <p class="text-slate-200">Оформите извещение через приложение «Госуслуги Авто» с фотофиксацией повреждений или на бумажном бланке с обеих сторон. ГИБДД можно не ждать!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= ВЬЮ 4: МОЁ АВТО (БАРДАЧОК + ВИЗИТКА) ================= -->
+            <section id="viewMyCar" class="hidden space-y-4">
+                <div class="p-4 rounded-2xl bg-[#181b24] border border-[#2a3042] space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-bold text-white">Карточка моего автомобиля</h2>
+                            <p class="text-xs text-slate-400">Данные хранятся локально в памяти телефона и всегда под рукой на АЗС или в сервисе.</p>
+                        </div>
+                        <button id="btnOpenParkingFullscreen" type="button" class="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shrink-0">
+                            🅿️ На весь экран
+                        </button>
+                    </div>
+
+                    <form id="myCarForm" class="space-y-3 pt-1">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Марка и модель</label>
+                                <input id="inputCarModel" type="text" value="Kia Rio / Hyundai Solaris" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Госномер</label>
+                                <input id="inputCarPlate" type="text" value="А 777 АА 777" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Лючок бензобака</label>
+                                <select id="inputFuelSide" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                                    <option value="◀ Слева">◀ Слева (со стороны водителя)</option>
+                                    <option value="Справа ▶">Справа ▶ (со стороны пассажира)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Рекомендуемое топливо</label>
+                                <select id="inputFuelType" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                                    <option value="АИ-95">АИ-95</option>
+                                    <option value="АИ-92">АИ-92</option>
+                                    <option value="АИ-98 / 100">АИ-98 / 100</option>
+                                    <option value="ДТ (Дизель)">ДТ (Дизель)</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2 sm:col-span-1">
+                                <label class="block text-[11px] text-slate-400 mb-1">Давление в шинах</label>
+                                <input id="inputTirePressure" type="text" value="2.2 бар (перед / зад)" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Моторное масло / вязкость</label>
+                                <input id="inputEngineOil" type="text" value="5W-30 API SP (4.0 л)" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Серия и номер полиса ОСАГО</label>
+                                <input id="inputOsagoPolicy" type="text" value="ХХХ 0123456789" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Телефон для парковочной визитки</label>
+                                <input id="inputOwnerPhone" type="tel" value="+7 (999) 123-45-67" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Телефон страховой / Эвакуатора</label>
+                                <input id="inputAssistancePhone" type="tel" value="8 (800) 100-00-00" class="w-full bg-[#0f1117] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                        </div>
+
+                        <div class="pt-1 flex items-center justify-between gap-2">
+                            <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow">
+                                💾 Сохранить в память смартфона
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Блок коммерческой модели -->
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#1f2437] to-[#171b26] border border-amber-500/30 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Коммерческая модель</span>
+                        <span class="text-xs text-emerald-400 font-semibold">Активна в прототипе</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-white">Готовая архитектура монетизации (RuStore / Google Play)</h3>
+                    <ul class="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Бесплатный базовый пакет:</strong> все экстренные алгоритмы ДТП, чек-лист выезда и базовые маневры (виральное распространение через автошколы).</li>
+                        <li><strong>Разовая покупка PRO (299 ₽) или промокод автошколы:</strong> интерактивные схемы парковки и колец, база индикаторов приборки, карточка «Моё авто» с напоминаниями ТО и парковочной визиткой.</li>
+                    </ul>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Нижняя панель навигации Android -->
+        <nav class="bg-[#141821]/95 backdrop-blur border-t border-[#242938] px-2 py-1.5 flex items-center justify-around sticky bottom-0 z-20">
+            <button type="button" data-nav-target="home" class="bottom-nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-xl text-blue-400 font-semibold bg-blue-500/10 text-[11px] gap-0.5">
+                <span class="text-lg leading-none">🧭</span>
+                <span>Ситуации</span>
+            </button>
+            <button type="button" data-nav-target="dashboard" class="bottom-nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-xl text-slate-400 hover:text-slate-200 font-medium text-[11px] gap-0.5">
+                <span class="text-lg leading-none">⚠️</span>
+                <span>Приборка</span>
+            </button>
+            <button type="button" data-nav-target="sos" class="bottom-nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-xl text-slate-400 hover:text-slate-200 font-medium text-[11px] gap-0.5">
+                <span class="text-lg leading-none">🚨</span>
+                <span>ЧП и ДТП</span>
+            </button>
+            <button type="button" data-nav-target="mycar" class="bottom-nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-xl text-slate-400 hover:text-slate-200 font-medium text-[11px] gap-0.5">
+                <span class="text-lg leading-none">🚘</span>
+                <span>Моё авто</span>
+            </button>
+        </nav>
+
+        <!-- Полноэкранный оверлей: Парковочная визитка -->
+        <div id="parkingCardOverlay" class="hidden absolute inset-0 z-40 bg-[#0b0d13] flex flex-col justify-between p-6 text-center select-none">
+            <div class="flex items-center justify-between">
+                <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/40">🅿️ ПАРКОВОЧНАЯ ВИЗИТКА</span>
+                <button id="btnCloseParkingOverlay" type="button" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700">
+                    ✕ Закрыть
+                </button>
+            </div>
+            <div class="my-auto space-y-5">
+                <div class="text-5xl">🚗</div>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight">Извините, если перекрыл выезд!</h2>
+                <p class="text-sm text-slate-300">Я отошел ненадолго и подойду через 3–5 минут. Позвоните мне:</p>
+                <div id="overlayOwnerPhone" class="py-4 px-4 rounded-2xl bg-amber-400 text-black font-mono font-black text-2xl sm:text-3xl tracking-tight shadow-xl">
+                    +7 (999) 123-45-67
+                </div>
+                <div id="overlayCarBadge" class="inline-block px-4 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-mono text-sm border border-slate-700">
+                    А 777 АА 777
+                </div>
+            </div>
+            <p class="text-xs text-slate-400">Положите телефон экраном вверх под лобовое стекло</p>
+        </div>
+
+        <!-- Полноэкранный оверлей: Аварийный маячок-стробоскоп -->
+        <div id="strobeOverlay" class="hidden absolute inset-0 z-50 strobe-active flex flex-col items-center justify-between p-6 text-center">
+            <div class="w-full flex justify-end">
+                <button id="btnCloseStrobeOverlay" type="button" class="px-4 py-2 rounded-xl bg-black/80 text-white text-sm font-bold border border-white/30">
+                    ✕ Выключить маячок
+                </button>
+            </div>
+            <div class="space-y-3 my-auto">
+                <div class="text-6xl font-black">⚠️ SOS</div>
+                <div class="text-2xl font-extrabold uppercase tracking-wide">Аварийная остановка</div>
+                <p class="text-sm font-semibold max-w-xs mx-auto">Используйте экран как дополнительный световой маяк на обочине в темное время суток</p>
+            </div>
+            <div class="text-xs font-bold uppercase tracking-widest bg-black/50 text-white px-4 py-2 rounded-full">
+                Нажмите «Выключить маячок» для возврата
+            </div>
+        </div>
+
+        <!-- Модальное окно инструкции по сборке Android APK / RuStore -->
+        <div id="commercialModal" class="hidden absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-[#181b24] border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-3 max-h-[90%] overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-white">📦 Коммерческий релиз на Android</h3>
+                    <button id="btnCloseCommercialModal" type="button" class="text-slate-400 hover:text-white text-sm font-bold px-2 py-1">✕</button>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Приложение спроектировано на базе <strong>Offline-First гибридной архитектуры (PWA + Kotlin WebView / Capacitor)</strong> — это стандарт для коммерческих справочников:
+                </p>
+                <div class="space-y-2 text-xs text-slate-300">
+                    <div class="p-2.5 rounded-xl bg-[#0f1117] border border-slate-800">
+                        <strong class="text-emerald-400 block">1. Полный офлайн в подземном паркинге и на трассе</strong>
+                        Все алгоритмы, SVG-схемы маневров и данные автомобиля работают без интернета и не требуют затрат на сервер.
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-[#0f1117] border border-slate-800">
+                        <strong class="text-blue-400 block">2. Публикация в RuStore, Google Play и AppGallery</strong>
+                        В приложенном архиве проекта <code>bez_paniki_android_studio_project.zip</code> находятся готовый <code>MainActivity.kt</code>, <code>AndroidManifest.xml</code> и Gradle-скрипты для сборки <code>.apk</code> и <code>.aab</code>.
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-[#0f1117] border border-slate-800">
+                        <strong class="text-amber-400 block">3. Прямые продажи B2B / Автошколы</strong>
+                        Вы можете распространять приложение по модели White-Label (с брендингом конкретной автошколы и промокодами для выпускников).
+                    </div>
+                </div>
+                <button id="btnCloseCommercialModalBottom" type="button" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">
+                    Понятно, вернуться к приложению
+                </button>
+            </div>
+        </div>
+
+        <!-- Всплывающий тост -->
+        <div id="toastNotification" class="hidden absolute bottom-16 left-4 right-4 z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center justify-between">
+            <span id="toastMessageText">Сохранено!</span>
+            <span>✓</span>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            function safeGetStorage(key, fallback) {
+                try {
+                    const val = window.localStorage.getItem(key);
+                    return val ? JSON.parse(val) : fallback;
+                } catch (e) {
+                    return fallback;
+                }
+            }
+
+            function safeSetStorage(key, value) {
+                try {
+                    window.localStorage.setItem(key, JSON.stringify(value));
+                } catch (e) {}
+            }
+
+            function showToast(msg) {
+                const toast = document.getElementById('toastNotification');
+                const text = document.getElementById('toastMessageText');
+                if (!toast || !text) return;
+                text.textContent = msg;
+                toast.classList.remove('hidden');
+                if (window.__toastTimer) clearTimeout(window.__toastTimer);
+                window.__toastTimer = setTimeout(function() {
+                    toast.classList.add('hidden');
+                }, 2600);
+            }
+
+            const defaultChecklist = [
+                { id: 'c1', text: 'Обойти машину: колеса накачаны, под авто нет свежих луж и препятствий', done: false },
+                { id: 'c2', text: 'Отрегулировать кресло: нога при полном выжиме тормоза слегка согнута', done: false },
+                { id: 'c3', text: 'Проверить боковые зеркала и салонное зеркало заднего вида', done: false },
+                { id: 'c4', text: 'Пристегнуть ремень безопасности (и проверить пассажиров)', done: false },
+                { id: 'c5', text: 'Завести мотор: на приборке НЕ горят красные индикаторы', done: false },
+                { id: 'c6', text: 'Включить ближний свет фар или убедиться, что горят ДХО (режим AUTO)', done: false },
+                { id: 'c7', text: 'Проверить запас топлива и телефон на держателе (маршрут построен заранее)', done: false },
+                { id: 'c8', text: 'Выжать тормоз, перевести КПП в D (или 1-ю передачу) и снять с ручника!', done: false }
+            ];
+
+            let checklistState = safeGetStorage('bp_checklist_v2', defaultChecklist);
+
+            const guidesData = [
+                {
+                    id: 'g-mirrors',
+                    category: 'garage',
+                    categoryLabel: '🚘 В гараже',
+                    badgeColor: 'emerald',
+                    icon: '🪞',
+                    title: 'Настройка посадки, руля и зеркал без «слепых зон»',
+                    subtitle: 'Как сесть удобно и видеть соседние ряды без мертвых зон',
+                    steps: [
+                        'Спинка кресла: сядьте глубоко, лопатки касаются спинки. Положите запястье прямой руки на верхнюю точку руля — оно должно лечь ровно на обод (локти при хвате «на 10 и 2 часа» согнуты под углом 100–120°).',
+                        'Высота и вылет: бедра не должны пережиматься подушкой сиденья, а над головой до потолка должен помещаться кулак.',
+                        'Боковые зеркала: поверните их наружу так, чтобы в нижнем внутреннем углу зеркала была видна лишь тонкая полоска вашего крыла и ручка передней двери (не больше 10% ширины зеркала!).',
+                        'Горизонт в зеркалах: линия горизонта должна проходить ровно посередине или чуть ниже центра (60% асфальта, 40% неба).',
+                        'Салонное зеркало: направьте центр зеркала ровно в центр заднего стекла, не поворачивая голову.'
+                    ],
+                    donts: 'Не направляйте боковые зеркала на кузов своей машины — так вы создадите огромную слепую зону в соседней полосе.',
+                    proTip: 'Проверка: когда машина в соседнем ряду начинает исчезать из салонного зеркала, её нос уже должен появляться в боковом зеркале.'
+                },
+                {
+                    id: 'g-fuel',
+                    category: 'garage',
+                    categoryLabel: '🚘 В гараже',
+                    badgeColor: 'emerald',
+                    icon: '⛽',
+                    title: 'Заправка на АЗС без паники: пошаговый алгоритм',
+                    subtitle: 'С какой стороны подъехать, какой пистолет взять и как оплатить',
+                    steps: [
+                        'Посмотрите на значок бензоколонки ⛽ на приборной панели: маленькая стрелочка рядом с ним (◀ или ▶) показывает, с какого борта находится лючок бензобака.',
+                        'Подъезжайте к колонке нужным бортом на расстоянии около 1 метра. Заглушите двигатель, поставьте на паркинг (P) или ручник и откройте лючок кнопкой/рычажком из салона (или нажатием на сам лючок).',
+                        'Открутите пробку бака, вставьте пистолет нужного топлива (например, АИ-95) до упора в горловину и защелкните фиксатор на рукоятке.',
+                        'Запомните номер своей колонки! Идите на кассу (или откройте приложение АЗС) и скажите: «Колонка №..., 95-й, на 2000 рублей (или до полного бака)».',
+                        'После окончания подачи топлива подождите 3 секунды, повесьте пистолет на колонку, закрутите пробку до щелчка и закройте лючок.'
+                    ],
+                    donts: 'Никогда не трогайтесь с места, не посмотрев в боковое зеркало на шланг колонки! Это самая частая ошибка новичков.',
+                    proTip: 'Если просите «до полного бака», пистолет сам отщелкнется при заполнении — бензин через край не польется.'
+                },
+                {
+                    id: 'g-tires-fluids',
+                    category: 'garage',
+                    categoryLabel: '🚘 В гараже',
+                    badgeColor: 'emerald',
+                    icon: '🔧',
+                    title: 'Давление в шинах, масло и омывайка: где и как проверять',
+                    subtitle: 'Базовый уход за машиной раз в 2 недели за 5 минут',
+                    steps: [
+                        'Где узнать норму давления шин: откройте водительскую дверь и посмотрите на торец центральной стойки (или лючок бензобака). Для большинства легковых авто норма — 2.2 бар (32 PSI).',
+                        'Проверка масла: поставьте авто на ровную площадку, заглушите и подождите 5–10 минут. Выньте желтый/оранжевый щуп, протрите салфеткой, вставьте до упора и снова достаньте — масляная пленка должна быть между метками MIN и MAX.',
+                        'Омывающая жидкость: заливается в бачок с синей (или желтой) крышкой и символом фонтанчика на лобовом стекле.',
+                        'Тормозная жидкость и антифриз: проверьте визуально через прозрачные стенки бачков под капотом (уровень между MIN и MAX).'
+                    ],
+                    donts: 'Не доливайте воду из-под крана в систему охлаждения и не смешивайте зимнюю омывайку с летней при наступлении заморозков.',
+                    proTip: 'Купите компактный аккумуляторный или проводной компрессор с цифровым автостопом: выставили 2.2 бар — он сам выключится.'
+                },
+                {
+                    id: 'g-fog-winter',
+                    category: 'garage',
+                    categoryLabel: '🚘 В гараже',
+                    badgeColor: 'emerald',
+                    icon: '❄️',
+                    title: 'Запотели стекла в дождь или замерзло лобовое зимой',
+                    subtitle: 'Какие кнопки климата нажать, чтобы вернуть обзор за 30 секунд',
+                    steps: [
+                        'Если в дождь резко запотело лобовое стекло изнутри: нажмите кнопку максимального обдува лобового стекла (иконка веера) И ОБЯЗАТЕЛЬНО включите кондиционер (кнопка A/C) даже с теплым воздухом — кондиционер моментально сушит воздух!',
+                        'Выключите режим рециркуляции (машинка со стрелкой внутри салона), чтобы воздух забирался с улицы, а не гонял влагу по кругу.',
+                        'Зимой при наледи: заведите авто, включите электрообогрев лобового/заднего стекла и зеркал (прямоугольник с волнистыми стрелками), направьте теплый обдув на стекло.',
+                        'Очистите щеткой от снега не только стекла, но и фары, поворотники и крышу (иначе при первом торможении сугроб с крыши съедет на лобовое стекло).'
+                    ],
+                    donts: 'Никогда не поливайте замерзшее стекло горячей водой из чайника — от перепада температур оно треснет мгновенно.',
+                    proTip: 'За 2 минуты до конца зимней поездки откройте двери на 30 секунд («проветрите салон»): сухой морозный воздух вытеснит влагу, и утром стекла изнутри не замерзнут.'
+                },
+                {
+                    id: 'g-warm-up',
+                    category: 'garage',
+                    categoryLabel: '🚘 В гараже',
+                    badgeColor: 'emerald',
+                    icon: '🌡️',
+                    title: 'Прогрев двигателя и коробки передач (АКПП / Вариатор)',
+                    subtitle: 'Сколько греть машину летом и зимой перед началом движения',
+                    steps: [
+                        'Летом (+10 °C и выше): достаточно 1–2 минут после пуска, пока обороты тахометра не упадут с 1200–1500 до рабочих 800–900 об/мин.',
+                        'Зимой (от 0 до -15 °C): грейте 3–5 минут, пока вы сметаете снег с кузова.',
+                        'Прогрев АКПП / Вариатора в мороз: перед выездом выжмите тормоз, переведите селектор поочередно в R и D, задержав в каждом положении по 15–20 секунд.',
+                        'Первые 2–3 километра пути двигайтесь плавно без резких ускорений (не выше 2500 об/мин), пока прогреваются амортизаторы и трансмиссия.'
+                    ],
+                    donts: 'Не газуйте на холодном двигателе сразу после запуска и не стойте на холостых по 25 минут во дворе.',
+                    proTip: 'Современный мотор быстрее и безопаснее всего выходит на рабочую температуру именно в плавном движении под небольшой нагрузкой.'
+                },
+                {
+                    id: 'c-roundabout',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '🔄',
+                    title: 'Проезд кругового движения (кольца) без путаницы',
+                    subtitle: 'Кому уступать, какой поворотник включать и из какого ряда съезжать',
+                    interactiveDiagram: 'roundabout',
+                    steps: [
+                        'Кто главный: если перед кольцом стоит знак 4.3 «Круговое движение» и нет знаков приоритета — ГЛАВНЫЕ те, кто уже едет по кольцу. Уступите машинам слева!',
+                        'Какой поворотник включать при въезде: при въезде на кольцо вы поворачиваете направо по направлению движения — по ПДД (п. 8.1) включается ПРАВЫЙ поворотник.',
+                        'Выбор полосы: если вам нужен первый съезд направо — заезжайте с правой полосы в правую. Если едете прямо (2-й съезд) или налево (3-й съезд) — удобнее заехать по левой/средней полосе.',
+                        'Съезд с кольца: по ПДД п. 8.5 выезжать с кольца нужно ТОЛЬКО из крайнего правого ряда (если знаки 5.15 «Направления движения по полосам» не разрешают съезд с двух полос). Заблаговременно перестройтесь правее и включите правый поворотник!'
+                    ],
+                    donts: 'Не съезжайте с внутреннего (левого) ряда кольца сразу на выход наперерез машинам, которые идут по внешнему кольцу!',
+                    proTip: 'Если пропустили перестроение в правый ряд перед своим съездом — не паникуйте и не режьте поток: просто сделайте еще один спокойный круг по кольцу!'
+                },
+                {
+                    id: 'c-parallel-park',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '📐',
+                    title: 'Параллельная парковка задним ходом за 4 ориентира',
+                    subtitle: 'Точная геометрическая схема по зеркалам — получится с первого раза',
+                    interactiveDiagram: 'parallel',
+                    steps: [
+                        'Шаг 1 (Исходная позиция): остановитесь параллельно впереди стоящей машине на расстоянии 50–70 см борт от борта так, чтобы ваши задние бамперы (или задние колеса) поравнялись.',
+                        'Шаг 2 (Заход под 45°): включите заднюю передачу (R), выкрутите руль ВПРАВО до упора и медленно сдавайте назад, глядя в ЛЕВОЕ зеркало, пока в нем полностью не покажутся ОБЕ фары (весь перед) сзади стоящего автомобиля. Стоп!',
+                        'Шаг 3 (Движение прямо): поставьте руль ПРЯМО (1.5 оборота влево) и сдавайте назад, пока ваше правое боковое зеркало не закроет левый задний фонарь впереди стоящей машины (или заднее правое колесо не приблизится к бордюру на 25–30 см). Стоп!',
+                        'Шаг 4 (Выравнивание в кармане): выкрутите руль ВЛЕВО до упора и плавно заведите нос автомобиля в парковочный карман параллельно бордюру.'
+                    ],
+                    donts: 'Не начинайте крутить руль влево слишком рано на Шаге 3 — иначе заднее колесо упрется в бордюр далеко от края, а нос останется торчать в полосе.',
+                    proTip: 'Секрет идеальной парковки: крутите руль на месте в точках остановки (или на минимальной скорости полувыжатого тормоза), никуда не торопясь.'
+                },
+                {
+                    id: 'c-box-park',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '🅿️',
+                    title: 'Парковка задним ходом в бокс (перпендикулярно 90°)',
+                    subtitle: 'Как заехать на парковку ТЦ между двумя машинами и не задеть соседей',
+                    steps: [
+                        'Подъезжайте перпендикулярно к парковочным местам на расстоянии около 1.5 метра от ряда стоящих машин.',
+                        'Проезжайте вперед мимо выбранного свободного места так, чтобы ваше плечо поравнялось с серединой (или дальней фарой) СЛЕДУЮЩЕЙ за свободным местом машины (или поверните от места под углом 45° вперед-влево).',
+                        'Включите R, выкрутите руль в сторону парковочного места до упора и медленно двигайтесь назад, поочередно контролируя левое и правое зеркала.',
+                        'Как только кузов выровнялся параллельно соседним машинам (в обоих зеркалах одинаковые зазоры) — верните руль прямо и заедьте вглубь до уровня соседних авто.'
+                    ],
+                    donts: 'Заезжать в узкий ряд парковки ТЦ передом сложнее, чем задом: у машины поворачивают передние колеса, поэтому задним ходом радиус захода намного меньше!',
+                    proTip: 'Если видите в зеркало, что прижимаетесь слишком близко к одной из машин — остановитесь, проедьте 1 метр вперед с прямым рулем и скорректируйте траекторию.'
+                },
+                {
+                    id: 'c-left-turn',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '↰',
+                    title: 'Поворот налево и разворот на перекрестке',
+                    subtitle: 'Где остановиться, как держать руль и когда завершать маневр',
+                    steps: [
+                        'Заранее займите крайнюю левую полосу и включите левый поворотник.',
+                        'На зеленый сигнал светофора выезжайте за стоп-линию до середины перекрестка и остановитесь, пропуская встречный поток (который едет прямо или направо).',
+                        'ЗОЛОТОЕ ПРАВИЛО БЕЗОПАСНОСТИ: пока вы стоите в центре перекрестка и ждете окно во встречном потоке — держите колеса СТРОГО ПРЯМО! Если нетрезвый или зазевавшийся водитель сзади толкнет вас в бампер, машина с прямыми колесами прокатится вперед, а с вывернутыми — вылетит лоб в лоб под встречный поток!',
+                        'Поворачивайте руль влево только в ту секунду, когда начали движение. Если загорелся желтый/красный, а вы уже выехали на перекресток — встречный поток остановится, и вы ОБЯЗАНЫ спокойно завершить поворот (ПДД п. 13.7).'
+                    ],
+                    donts: 'При повороте налево следите за траекторией, чтобы не «срезать угол» через встречную полосу той дороги, на которую поворачиваете.',
+                    proTip: 'Если за большим грузовиком напротив не видно встречных машин — не поворачивайте вслепую! Дождитесь, пока обзор откроется полностью.'
+                },
+                {
+                    id: 'c-lane-change',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '🔀',
+                    title: 'Перестроение в плотном городском потоке',
+                    subtitle: 'Как понять по зеркалу, что можно перестраиваться и вас пропускают',
+                    steps: [
+                        'Включите поворотник ЗАРАНЕЕ (до начала вращения руля) — покажите потоку свое намерение.',
+                        'Оцените боковое зеркало: если вы видите в боковом зеркале ОБЕ фары автомобиля в соседней полосе, и он не приближается стремительно — дистанция безопасная.',
+                        'Быстрый взгляд через плечо (на 0.5 секунды в окно задней двери): убедитесь, что в «слепой зоне» на уровне вашего заднего крыла нет другой машины или мотоциклиста.',
+                        'Перестраивайтесь плавно под острым углом, СЛЕГКА ДОБАВЛЯЯ ГАЗ, чтобы уравнять скорость с потоком соседней полосы (никогда не перестраивайтесь с нажатым тормозом!).'
+                    ],
+                    donts: 'Не выкручивайте руль резко при перестроении — плавное смещение занимает 3–4 секунды и дает соседям время среагировать.',
+                    proTip: 'В пробке работает правило «через одного (елочка)»: включите поворотник, поймайте взгляд водителя в соседнем ряду и после перестроения моргните аварийкой 2 раза («Спасибо!»).'
+                },
+                {
+                    id: 'c-distance-hill',
+                    category: 'city',
+                    categoryLabel: '🛣️ В городе',
+                    badgeColor: 'blue',
+                    icon: '⛰️',
+                    title: 'Безопасная дистанция и старт в горку без отката назад',
+                    subtitle: 'Ориентиры в пробке, правило 2 секунд и подъем на эстакаду',
+                    steps: [
+                        'Дистанция в пробке при остановке: останавливайтесь так, чтобы поверх капота вы видели задние колеса впереди стоящей машины И полоску асфальта под ними (это примерно 2.5–3 метра — если авто спереди заглохнет, вы легко объедете его с одного поворота руля).',
+                        'Дистанция в движении («Правило 2 секунд»): заметьте столб или знак, который проехала машина впереди, и посчитайте «двадцать один, двадцать два». Если вы проехали этот столб раньше — вы висите на хвосте, увеличьте дистанцию! В дождь и гололед — 4 секунды.',
+                        'Старт в горку на АКПП: включите систему AutoHold (если есть) или при крутом подъеме придержите авто левой ногой/ручником, плавно нажмите газ и отпустите ручник.',
+                        'Старт в горку на МКПП с ручником: держите машину на ручнике → добавьте газ до 1500–1800 об/мин → плавно отпускайте сцепление до момента, когда капот слегка приподнимется (машина «присядет») → плавно опустите ручник.'
+                    ],
+                    donts: 'Не подъезжайте вплотную к грузовикам и фурам на подъеме — при старте они могут откатиться на 50–80 см назад.',
+                    proTip: 'Если водитель сзади «прижался» к вашему бамперу на крутой горке — увеличьте дистанцию до машины СПЕРЕДИ, чтобы трогаться максимально плавно.'
+                },
+                {
+                    id: 'e-dtp-guide',
+                    category: 'emergency',
+                    categoryLabel: '🚨 Я в беде!',
+                    badgeColor: 'red',
+                    icon: '💥',
+                    title: 'Попал в ДТП: первые 5 минут без паники',
+                    subtitle: 'Строгий порядок действий по ПДД, чтобы не лишиться прав и выплаты ОСАГО',
+                    steps: [
+                        '1. МГНОВЕННО ОСТАНОВИТЕСЬ! Переведите КПП в паркинг (P), поднимите ручник, включите аварийную сигнализацию 🔺. Ни в коем случае не отъезжайте к обочине до фотофиксации!',
+                        '2. Проверьте, нет ли пострадавших. Если кому-то нужна медпомощь — сразу звоните 112 (или 103). В темное время суток наденьте светоотражающий жилет до выхода на проезжую часть.',
+                        '3. Выставьте знак аварийной остановки (красный треугольник из багажника): в городе — минимум в 15 метрах от машины (это 20–22 широких шага), за городом на трассе — минимум в 30 метрах (40–45 шагов).',
+                        '4. Сделайте подробные фото и видео: общие планы с 4 сторон (чтобы в кадре были номера обеих машин, разметка и адресная табличка на доме/столб), следы торможения, осыпавшиеся осколки и крупные планы всех царапин.',
+                        '5. Откройте вкладку «🚨 ЧП и ДТП» внизу экрана: проверьте по калькулятору, подходит ли ваш случай под Европротокол (через «Госуслуги Авто»), или вызовите ГИБДД по номеру 112 / 102.'
+                    ],
+                    donts: 'Не соглашайтесь «просто разъехаться под расписку» без оформления Европротокола или ГИБДД — второй участник может вернуться на место и заявить, что вы скрылись с места ДТП (ч. 2 ст. 12.27 КоАП — лишение прав!).',
+                    proTip: 'Если к вам сразу подъехали навязчивые «частные аварийные комиссары», которых вы не вызывали — не отдавайте им документы. Звоните только в свою страховую компанию по номеру из полиса ОСАГО!'
+                },
+                {
+                    id: 'e-dps-stop',
+                    category: 'emergency',
+                    categoryLabel: '🚨 Я в беде!',
+                    badgeColor: 'red',
+                    icon: '👮',
+                    title: 'Остановил инспектор ДПС: как действовать спокойно и грамотно',
+                    subtitle: 'Куда прижаться, нужно ли выходить из машины и какие документы показать',
+                    steps: [
+                        'Увидев взмах жезла или сигнал патрульной машины, сразу включите ПРАВЫЙ поворотник и плавно перестройтесь к правому краю дороги (обочине). Если в месте взмаха остановка запрещена — проедьте чуть дальше до разрешенного места или остановитесь там, куда указал инспектор.',
+                        'Переведите КПП в паркинг (P), поставьте на ручник, выключите музыку. В темное время суток включите свет в салоне и положите руки на руль.',
+                        'НЕ выходите из автомобиля навстречу инспектору! Оставайтесь на водительском месте, опустите боковое стекло.',
+                        'Приготовьте 3 документа: Водительское удостоверение (права), СТС (розовая карточка регистрации авто) и полис ОСАГО (электронный полис можно показать на экране смартфона или в приложении «Госуслуги Авто»).',
+                        'Разговаривайте спокойно и вежливо. Если инспектор просит открыть багажник для визуального осмотра — вы можете открыть его сами, не выходя или выйдя из авто (при этом инспектор не трогает вещи руками; полный досмотр проводится только под протокол и видеозапись).'
+                    ],
+                    donts: 'Не передавайте документы в обложке с вложенными деньгами или посторонними карточками — выньте права и СТС из обложки заранее.',
+                    proTip: 'Если вы новичок и сильно волнуетесь — так и скажите с улыбкой: «Я недавно за рулем, меня впервые остановили, немного волнуюсь». Инспекторы живые люди и относятся к таким водителям доброжелательно!'
+                },
+                {
+                    id: 'e-flat-tire',
+                    category: 'emergency',
+                    categoryLabel: '🚨 Я в беде!',
+                    badgeColor: 'red',
+                    icon: '🛞',
+                    title: 'Пробило колесо на ходу: как удержать машину и что делать',
+                    subtitle: 'Признаки прокола, плавная остановка и правила замены колеса',
+                    steps: [
+                        'Как понять, что колесо спущено: руль начинает ощутимо тянуть в одну сторону, а снаружи слышен глухой ритмичный хлопающий звук («бух-бух-бух»).',
+                        'Крепко возьмитесь за руль ДВУМЯ руками! КАТЕГОРИЧЕСКИ НЕ бейте резко по тормозам — при резком торможении со спущенным колесом машину развернет!',
+                        'Плавно уберите ногу с педали газа, включите аварийку, дайте машине потерять скорость и с правым поворотником съедьте на твердую ровную обочину или парковку.',
+                        'При замене колеса на запаску: поставьте авто на ручник + паркинг, подложите упор под целое колесо по диагонали, СНАЧАЛА ослабьте колесные гайки на пол-оборота на земле, и только потом поднимайте машину домкратом!',
+                        'Затягивайте гайки нового колеса крест-накрест (звездочкой), а окончательную силовую затяжку делайте уже после опускания машины с домкрата.'
+                    ],
+                    donts: 'Не продолжайте ехать на полностью спущенном колесе даже «пару километров до шиномонтажа» — металлический диск за 300 метров изрежет резину в лоскуты, и покрышку придется выбросить.',
+                    proTip: 'На оживленной трассе или МКАД менять левое колесо со стороны потока смертельно опасно! Проедьте 100 метров со скоростью 5 км/ч до кармана/съезда или вызовите выездной шиномонтаж / службу ЦОДД.'
+                },
+                {
+                    id: 'e-overheat',
+                    category: 'emergency',
+                    categoryLabel: '🚨 Я в беде!',
+                    badgeColor: 'red',
+                    icon: '♨️',
+                    title: 'Закипел двигатель или пошел пар из-под капота',
+                    subtitle: 'Как спасти мотор от перегрева и не получить ожог кипящим антифризом',
+                    steps: [
+                        'Если стрелка температуры поползла в красную зону (выше 100–110 °C) или загорелся красный термометр 🌡️: немедленно выключите кондиционер (A/C) и ВКЛЮЧИТЕ ПЕЧКУ САЛОНА НА МАКСИМУМ ТЕПЛА (+30 °C) и максимальные обороты вентилятора! Радиатор печки заберет часть жара от двигателя.',
+                        'Включите аварийку, плавно съедьте на обочину, остановитесь и заглушите двигатель (но оставьте зажигание включенным, чтобы работал вентилятор обдува радиатора).',
+                        'Откройте капот из салона, чтобы горячий воздух быстрее уходил наружу.',
+                        'Ждите минимум 30–40 минут, пока двигатель полностью остынет! Только после остывания проверьте уровень антифриза в расширительном бачке и наличие течей под машиной.'
+                    ],
+                    donts: 'СТРОЖАЙШИЙ ЗАПРЕТ: Ни в коем случае не откручивайте крышку радиатора или расширительного бачка на горячем двигателе! Внутри давление до 1.5 атмосфер — струя кипящего антифриза (+115 °C) ударит фонтаном в лицо и руки!',
+                    proTip: 'Также нельзя лить ледяную воду в раскаленный мотор — от резкого перепада температур головку блока цилиндров (ГБЦ) поведет, и потребуется капитальный ремонт.'
+                },
+                {
+                    id: 'e-battery-jump',
+                    category: 'emergency',
+                    categoryLabel: '🚨 Я в беде!',
+                    badgeColor: 'red',
+                    icon: '🔋',
+                    title: 'Сел аккумулятор: безопасная схема «прикуривания» (1-2-3-4)',
+                    subtitle: 'В каком порядке подключать пусковые провода, чтобы не сжечь электронику',
+                    interactiveDiagram: 'battery',
+                    steps: [
+                        'Поставьте машину-донор рядом так, чтобы хватило длины проводов (машины не должны касаться друг друга кузовами!). Заглушите мотор донора и выключите все приборы в обоих авто.',
+                        'Крокодил №1 (КРАСНЫЙ +): подключите к плюсовой (+) клемме СЕВШЕГО аккумулятора (вашего авто).',
+                        'Крокодил №2 (КРАСНЫЙ +): второй конец красного провода подключите к плюсовой (+) клемме ЗАРЯЖЕННОГО аккумулятора (донора).',
+                        'Крокодил №3 (ЧЕРНЫЙ −): подключите к минусовой (−) клемме ЗАРЯЖЕННОГО аккумулятора (донора).',
+                        'Крокодил №4 (ЧЕРНЫЙ −): подключите к неокрашенной металлической детали двигателя или кузова («массе») ВАШЕГО авто подальше от аккумулятора. Заведите донора на 5 минут, заглушите его и заводите свою машину! Снимайте провода в обратном порядке (4 → 3 → 2 → 1).'
+                    ],
+                    donts: 'Никогда не допускайте соприкосновения красного и черного зажимов между собой и не путайте полярность (+ и −) — это мгновенно выведет из строя предохранители и блок управления (ЭБУ).',
+                    proTip: 'Компактный литиевый бустер (Jump Starter) размером с повербанк позволяет завести машину за 1 минуту в одиночку без поиска соседа-донора.'
+                }
+            ];
+
+            const dashboardIndicators = [
+                {
+                    id: 'ind-oil',
+                    color: 'red',
+                    colorBadge: '🔴 КРАСНЫЙ — СТОП',
+                    symbol: '🛢️',
+                    title: 'Давление масла («Масленка»)',
+                    short: 'СТОП! Заглушить мотор',
+                    verdict: 'Ехать НЕЛЬЗЯ! Немедленно остановитесь и заглушите двигатель.',
+                    action: 'В системе смазки упало давление масла. Даже 2 минуты работы мотора приведут к заклиниванию. Остановитесь, подождите 5 минут, проверьте щуп. Если масло на минимуме — долейте; если в норме, но лампа горит — только эвакуатор.'
+                },
+                {
+                    id: 'ind-temp',
+                    color: 'red',
+                    colorBadge: '🔴 КРАСНЫЙ — СТОП',
+                    symbol: '🌡️',
+                    title: 'Перегрев двигателя (ОЖ)',
+                    short: 'СТОП! Охладить мотор',
+                    verdict: 'Ехать НЕЛЬЗЯ! Критическая температура охлаждающей жидкости.',
+                    action: 'Включите печку салона на максимум тепла (+30 °C), съедьте на обочину и заглушите мотор. НЕ открывайте крышку бачка антифриза минимум 30–40 минут (опасность ожога паром!).'
+                },
+                {
+                    id: 'ind-brake',
+                    color: 'red',
+                    colorBadge: '🔴 КРАСНЫЙ — СТОП',
+                    symbol: '❗',
+                    title: 'Тормозная система ((!))',
+                    short: 'Ручник или нет тормозов',
+                    verdict: 'Проверьте рычаг ручника! Если ручник опущен — ехать ОПАСНО!',
+                    action: 'Чаще всего у новичков этот знак горит, потому что забыли до конца опустить ручной тормоз. Если ручник полностью снят, а знак (!) горит — упал уровень тормозной жидкости (утечка в тормозах). Движение запрещено!'
+                },
+                {
+                    id: 'ind-battery',
+                    color: 'red',
+                    colorBadge: '🔴 КРАСНЫЙ — СТОП',
+                    symbol: '🔋',
+                    title: 'Заряд аккумулятора / Генератор',
+                    short: 'Нет заряда от генератора',
+                    verdict: 'Генератор перестал заряжать АКБ. Машина скоро заглохнет.',
+                    action: 'Выключите фары (кроме ДХО), печку, музыку и обогревы, чтобы сэкономить заряд аккумулятора, и сразу двигайтесь в ближайший автосервис или к дому (запаса АКБ хватит на 20–40 минут).'
+                },
+                {
+                    id: 'ind-check',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '⚙️',
+                    title: 'Check Engine («Чек двигателя»)',
+                    short: 'Ошибка системы двигателя',
+                    verdict: 'Если горит ровно — можно плавно доехать до сервиса. Если мигает — СТОП!',
+                    action: 'Означает ошибку датчика, свечей или некачественное топливо. Если машина едет нормально, а значок просто светится желтым — запишитесь на диагностику OBD2. Если значок МИГАЕТ и машину трясет (троит) — остановитесь!'
+                },
+                {
+                    id: 'ind-tpms',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '🛞',
+                    title: 'Давление в шинах (TPMS)',
+                    short: 'Спустило одно из колес',
+                    verdict: 'Снизьте скорость, остановитесь и осмотрите все 4 колеса.',
+                    action: 'Давление в одном или нескольких колесах упало (обычно из-за самореза или резкого похолодания). Проверьте колеса манометром, подкачайте до нормы (2.2 бар) или заедьте на шиномонтаж.'
+                },
+                {
+                    id: 'ind-abs',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '🅰️',
+                    title: 'Неисправность ABS',
+                    short: 'Отключилась антиблокировка',
+                    verdict: 'Обычные тормоза работают, но колеса могут пойти юзом при резком торможении.',
+                    action: 'Ехать можно с увеличенной дистанцией и без резких торможений в пол, особенно на мокром асфальте или льду. Обратитесь в сервис для проверки датчика колеса.'
+                },
+                {
+                    id: 'ind-esp',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '〰️',
+                    title: 'Система стабилизации (ESP / ESC)',
+                    short: 'Скользкая дорога / занос',
+                    verdict: 'Если мигает на ходу — под колесами гололед или каша, сбросьте газ!',
+                    action: 'Когда машинка на извилистой дороге мигает в повороте — электроника прямо сейчас спасает вас от заноса. Если значок горит постоянно — система стабилизации отключена кнопкой или неисправна.'
+                },
+                {
+                    id: 'ind-fuel-low',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '⛽',
+                    title: 'Резерв топлива',
+                    short: 'Осталось на 40–50 км',
+                    verdict: 'В баке осталось около 5–7 литров топлива. Заправьтесь на ближайшей АЗС.',
+                    action: 'Не доводите бак до полной сухости: бензонасос охлаждается самим топливом и при езде «на парах» может перегреться и выйти из строя.'
+                },
+                {
+                    id: 'ind-washer',
+                    color: 'yellow',
+                    colorBadge: '🟡 ЖЕЛТЫЙ — ВНИМАНИЕ',
+                    symbol: '💦',
+                    title: 'Омыватель лобового стекла',
+                    short: 'Заканчивается омывайка',
+                    verdict: 'Безопасно. При первой возможности долейте жидкость в бачок.',
+                    action: 'В слякоть или зимой грязное лобовое стекло за секунды лишает обзора — возите запасную канистру омывайки в багажнике.'
+                },
+                {
+                    id: 'ind-highbeam',
+                    color: 'info',
+                    colorBadge: '🔵 СИНИЙ — ИНФО',
+                    symbol: '🔦',
+                    title: 'Включен дальний свет фар',
+                    short: 'Вы слепите встречный поток!',
+                    verdict: 'В городе и при наличии встречных/попутных машин немедленно переключите на ближний!',
+                    action: 'Потяните левый подрулевой рычажок на себя (или от себя в среднее положение), чтобы выключить синюю фару с прямыми лучами и не ослеплять других водителей.'
+                },
+                {
+                    id: 'ind-lowbeam',
+                    color: 'info',
+                    colorBadge: '🟢 ЗЕЛЕНЫЙ — ИНФО',
+                    symbol: '💡',
+                    title: 'Ближний свет / Габариты',
+                    short: 'Штатный режим освещения',
+                    verdict: 'Всё отлично! Внешние световые приборы включены по ПДД.',
+                    action: 'Зеленые индикаторы на приборной панели всегда информируют о штатной работе включенных систем (ближний свет, поворотники, круиз-контроль, режим ECO).'
+                }
+            ];
+
+            const defaultDtpSteps = [
+                { id: 'd1', title: '1. Остановиться, включить аварийку 🔺 и поставить на ручник', detail: 'Не двигайте автомобиль ни на сантиметр до окончания фотосъемки.', done: false },
+                { id: 'd2', title: '2. Проверить людей и надеть светоотражающий жилет', detail: 'Если есть раненые — сразу вызов 112. Жилет обязателен ночью и вне города.', done: false },
+                { id: 'd3', title: '3. Выставить знак аварийной остановки (15 м в городе / 30 м трасса)', detail: 'Отсчитайте 22 широких шага в городе или 45 шагов на трассе со стороны потока.', done: false },
+                { id: 'd4', title: '4. Сфотографировать место ДТП с 4 углов + привязку к адресу', detail: 'В кадре должны быть оба госномера, разметка, дорожные знаки и табличка дома.', done: false },
+                { id: 'd5', title: '5. Оформить Европротокол («Госуслуги Авто») или вызвать ГИБДД (112)', detail: 'Проверьте условия в калькуляторе ниже перед тем, как убирать машины с проезжей части.', done: false }
+            ];
+
+            let dtpStepsState = safeGetStorage('bp_dtp_steps_v2', defaultDtpSteps);
+
+            const defaultCarData = {
+                model: 'Kia Rio / Hyundai Solaris',
+                plate: 'А 777 АА 777',
+                fuelSide: '◀ Слева',
+                fuelType: 'АИ-95',
+                tirePressure: '2.2 бар',
+                engineOil: '5W-30 API SP (4.0 л)',
+                osagoPolicy: 'ХХХ 0123456789',
+                ownerPhone: '+7 (999) 123-45-67',
+                assistancePhone: '8 (800) 100-00-00'
+            };
+
+            let myCarState = safeGetStorage('bp_mycar_v2', defaultCarData);
+
+            let currentCategoryFilter = 'all';
+            let currentSearchQuery = '';
+            let currentDashFilter = 'all';
+            let selectedIndicatorId = 'ind-oil';
+
+            function buildInteractiveDiagramHtml(type, guideId) {
+                if (type === 'roundabout') {
+                    return `
+                        <div class="mt-3 p-3 rounded-xl bg-[#0f1117] border border-blue-500/30 space-y-2.5" data-diagram-box="${guideId}">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold text-blue-300 uppercase">Интерактивная схема кольца</span>
+                                <span class="text-[10px] text-slate-400">Нажмите на шаг:</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <button type="button" data-diag-step="1" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-2 rounded-lg bg-blue-600 text-white text-[11px] font-bold">1. Въезд ↱</button>
+                                <button type="button" data-diag-step="2" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-2 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">2. По кольцу 🔄</button>
+                                <button type="button" data-diag-step="3" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-2 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">3. Съезд ↱</button>
+                            </div>
+                            <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                                <svg viewBox="0 0 220 160" class="w-48 h-36 shrink-0 bg-[#141824] rounded-xl border border-slate-800">
+                                    <circle cx="110" cy="80" r="56" fill="none" stroke="#334155" stroke-width="26"/>
+                                    <circle cx="110" cy="80" r="56" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 5"/>
+                                    <circle cx="110" cy="80" r="28" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+                                    <text x="110" y="84" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">КОЛЬЦО</text>
+                                    <path d="M 122 155 Q 155 125 162 85 Q 160 40 110 25 Q 72 30 56 68" fill="none" stroke="#3b82f6" stroke-width="3" stroke-dasharray="4 3"/>
+                                    <g id="svgCar_${guideId}">
+                                        <circle cx="132" cy="138" r="9" fill="#10b981"/>
+                                        <text x="132" y="142" text-anchor="middle" fill="#000" font-size="10" font-weight="bold">🚗</text>
+                                    </g>
+                                </svg>
+                                <div id="diagCaption_${guideId}" class="text-xs text-slate-200 leading-relaxed">
+                                    <strong class="text-emerald-400 block mb-1">Шаг 1: Въезд на кольцо</strong>
+                                    Уступите машинам слева, которые уже идут по кольцу. При въезде включите <strong>ПРАВЫЙ</strong> поворотник.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (type === 'parallel') {
+                    return `
+                        <div class="mt-3 p-3 rounded-xl bg-[#0f1117] border border-blue-500/30 space-y-2.5" data-diagram-box="${guideId}">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold text-blue-300 uppercase">Траектория параллельной парковки</span>
+                                <span class="text-[10px] text-slate-400">По шагам:</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1">
+                                <button type="button" data-diag-step="1" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold">Шаг 1</button>
+                                <button type="button" data-diag-step="2" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-1.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">Шаг 2 (45°)</button>
+                                <button type="button" data-diag-step="3" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-1.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">Шаг 3</button>
+                                <button type="button" data-diag-step="4" data-diag-target="${guideId}" class="diag-step-btn py-1.5 px-1.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">Шаг 4</button>
+                            </div>
+                            <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                                <svg viewBox="0 0 220 140" class="w-48 h-32 shrink-0 bg-[#141824] rounded-xl border border-slate-800">
+                                    <rect x="195" y="0" width="25" height="140" fill="#334155"/>
+                                    <line x1="195" y1="0" x2="195" y2="140" stroke="#f59e0b" stroke-width="2"/>
+                                    <rect x="155" y="10" width="32" height="36" rx="5" fill="#475569" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <text x="171" y="32" text-anchor="middle" fill="#e2e8f0" font-size="8">АВТО 1</text>
+                                    <rect x="155" y="96" width="32" height="36" rx="5" fill="#475569" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <text x="171" y="118" text-anchor="middle" fill="#e2e8f0" font-size="8">АВТО 2</text>
+                                    <path d="M 122 28 C 122 55, 170 60, 171 74" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-dasharray="4 3"/>
+                                    <g id="svgCar_${guideId}">
+                                        <rect x="106" y="10" width="32" height="36" rx="5" fill="#10b981"/>
+                                        <text x="122" y="32" text-anchor="middle" fill="#000" font-size="8" font-weight="bold">ВЫ</text>
+                                    </g>
+                                </svg>
+                                <div id="diagCaption_${guideId}" class="text-xs text-slate-200 leading-relaxed">
+                                    <strong class="text-emerald-400 block mb-1">Шаг 1: Поравняться бамперами</strong>
+                                    Встаньте параллельно АВТО 1 в 50–70 см от него так, чтобы задние бамперы были на одной линии.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (type === 'battery') {
+                    return `
+                        <div class="mt-3 p-3 rounded-xl bg-[#0f1117] border border-red-500/30 space-y-2" data-diagram-box="${guideId}">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold text-red-300 uppercase">Схема подключения клемм: 1 → 2 → 3 → 4</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-700">
+                                    <div class="font-bold text-slate-300 mb-1">🔋 Ваше авто (Севший АКБ)</div>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <span class="px-2 py-0.5 rounded bg-red-600 text-white font-bold">1. Плюс (+)</span>
+                                        <span class="px-2 py-0.5 rounded bg-slate-700 text-amber-300 font-bold">4. На металл</span>
+                                    </div>
+                                </div>
+                                <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-700">
+                                    <div class="font-bold text-slate-300 mb-1">⚡ Донор (Заряженный АКБ)</div>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <span class="px-2 py-0.5 rounded bg-red-600 text-white font-bold">2. Плюс (+)</span>
+                                        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-bold border border-slate-600">3. Минус (−)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                return '';
+            }
+
+            function renderChecklist() {
+                const container = document.getElementById('checklistItemsContainer');
+                const progressBar = document.getElementById('checklistProgressBar');
+                const quickStatus = document.getElementById('quickChecklistStatus');
+                if (!container) return;
+
+                const doneCount = checklistState.filter(function(item) { return item.done; }).length;
+                const total = checklistState.length;
+                const pct = Math.round((doneCount / total) * 100);
+
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (quickStatus) {
+                    quickStatus.textContent = doneCount === total ? 'Готов к выезду! (8/8)' : 'Готовность: ' + doneCount + '/' + total;
+                }
+
+                container.innerHTML = checklistState.map(function(item) {
+                    return `
+                        <label class="flex items-start gap-2.5 p-2 rounded-xl cursor-pointer transition ${item.done ? 'bg-emerald-950/30 border border-emerald-500/30 text-slate-400 line-through' : 'bg-[#0f1117] hover:bg-slate-800/70 border border-slate-800 text-slate-200'}">
+                            <input type="checkbox" data-check-id="${item.id}" class="checklist-toggle mt-0.5 w-4 h-4 accent-emerald-500 rounded shrink-0" ${item.done ? 'checked' : ''}>
+                            <span class="text-xs leading-snug select-none">${item.text}</span>
+                        </label>
+                    `;
+                }).join('');
+            }
+
+            function renderGuidesList() {
+                const container = document.getElementById('guidesListContainer');
+                const titleEl = document.getElementById('guidesSectionTitle');
+                const resetBtn = document.getElementById('btnResetCategoryFilter');
+                if (!container) return;
+
+                const q = currentSearchQuery.trim().toLowerCase();
+                const filtered = guidesData.filter(function(g) {
+                    const matchCat = currentCategoryFilter === 'all' || g.category === currentCategoryFilter;
+                    if (!matchCat) return false;
+                    if (!q) return true;
+                    const haystack = (g.title + ' ' + g.subtitle + ' ' + g.steps.join(' ') + ' ' + g.donts + ' ' + g.proTip).toLowerCase();
+                    return haystack.indexOf(q) !== -1;
+                });
+
+                const catNames = {
+                    all: 'Все шпаргалки и алгоритмы',
+                    garage: '🚘 В гараже и перед выездом',
+                    city: '🛣️ В городе и на дороге',
+                    emergency: '🚨 Я в беде! (ЧП, ДТП и ДПС)'
+                };
+
+                if (titleEl) {
+                    titleEl.textContent = (catNames[currentCategoryFilter] || 'Ситуации') + ' (' + filtered.length + ')';
+                }
+                if (resetBtn) {
+                    if (currentCategoryFilter !== 'all' || q !== '') {
+                        resetBtn.classList.remove('hidden');
+                    } else {
+                        resetBtn.classList.add('hidden');
+                    }
+                }
+
+                document.querySelectorAll('.cat-filter-btn').forEach(function(btn) {
+                    const cat = btn.getAttribute('data-cat-btn');
+                    if (cat === currentCategoryFilter) {
+                        btn.classList.add('ring-2', 'ring-blue-500');
+                    } else {
+                        btn.classList.remove('ring-2', 'ring-blue-500');
+                    }
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-6 rounded-2xl bg-[#181b24] border border-[#2a3042] text-center space-y-2">
+                            <div class="text-3xl">🔍</div>
+                            <div class="text-sm font-bold text-white">Ничего не найдено по запросу «${q}»</div>
+                            <p class="text-xs text-slate-400">Попробуйте сбросить фильтр или поискать другое слово (например: «кольцо», «парковка», «ДПС», «масло»).</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(function(g, idx) {
+                    const isFirstEmergency = g.category === 'emergency';
+                    const borderClass = isFirstEmergency ? 'border-red-500/40 bg-[#1f1418]' : 'border-[#2a3042] bg-[#181b24]';
+                    const badgeClass = g.badgeColor === 'emerald'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : g.badgeColor === 'blue'
+                        ? 'bg-blue-500/20 text-blue-300'
+                        : 'bg-red-500/25 text-red-200';
+
+                    const stepsHtml = g.steps.map(function(st, sIdx) {
+                        return `
+                            <li class="flex items-start gap-2.5 text-xs text-slate-200 leading-relaxed">
+                                <span class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">${sIdx + 1}</span>
+                                <span>${st}</span>
+                            </li>
+                        `;
+                    }).join('');
+
+                    const diagramHtml = g.interactiveDiagram ? buildInteractiveDiagramHtml(g.interactiveDiagram, g.id) : '';
+
+                    return `
+                        <article class="rounded-2xl border ${borderClass} overflow-hidden transition">
+                            <button type="button" data-guide-toggle="${g.id}" class="guide-header-btn w-full p-3.5 text-left flex items-start justify-between gap-3 hover:bg-white/[0.02]">
+                                <div class="flex items-start gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-[#0f1117] border border-slate-800 flex items-center justify-center text-xl shrink-0 mt-0.5">
+                                        ${g.icon}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}">${g.categoryLabel}</span>
+                                        <h3 class="text-sm font-bold text-white mt-1 leading-snug">${g.title}</h3>
+                                        <p class="text-xs text-slate-400 mt-0.5">${g.subtitle}</p>
+                                    </div>
+                                </div>
+                                <span id="guideArrow_${g.id}" class="text-slate-400 text-sm font-bold mt-2 shrink-0">${idx === 0 ? '▲' : '▼'}</span>
+                            </button>
+                            <div id="guideBody_${g.id}" class="${idx === 0 ? '' : 'hidden'} px-3.5 pb-4 pt-2 border-t border-slate-800/80 space-y-3">
+                                <ul class="space-y-2">
+                                    ${stepsHtml}
+                                </ul>
+                                ${diagramHtml}
+                                <div class="p-2.5 rounded-xl bg-red-950/40 border border-red-500/30 text-xs text-red-200 leading-relaxed">
+                                    <strong class="text-red-400 block mb-0.5">❌ Чего делать НЕЛЬЗЯ:</strong>
+                                    ${g.donts}
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-blue-950/30 border border-blue-500/30 text-xs text-blue-100 leading-relaxed">
+                                    <strong class="text-blue-300 block mb-0.5">💡 Совет опытного водителя:</strong>
+                                    ${g.proTip}
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            function renderDashboardIndicators() {
+                const grid = document.getElementById('indicatorsGrid');
+                if (!grid) return;
+
+                const filtered = dashboardIndicators.filter(function(ind) {
+                    if (currentDashFilter === 'all') return true;
+                    return ind.color === currentDashFilter;
+                });
+
+                grid.innerHTML = filtered.map(function(ind) {
+                    const isSelected = ind.id === selectedIndicatorId;
+                    const borderColor = ind.color === 'red'
+                        ? (isSelected ? 'border-red-400 ring-2 ring-red-500/50 bg-[#281519]' : 'border-red-500/30 bg-[#1c1317]')
+                        : ind.color === 'yellow'
+                        ? (isSelected ? 'border-amber-400 ring-2 ring-amber-500/50 bg-[#262014]' : 'border-amber-500/30 bg-[#1a1814]')
+                        : (isSelected ? 'border-blue-400 ring-2 ring-blue-500/50 bg-[#162030]' : 'border-slate-700 bg-[#181b24]');
+
+                    return `
+                        <button type="button" data-ind-id="${ind.id}" class="ind-card-btn tap-card p-3 rounded-xl border ${borderColor} text-left flex items-center gap-2.5">
+                            <span class="text-2xl shrink-0">${ind.symbol}</span>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-white truncate">${ind.title}</div>
+                                <div class="text-[11px] text-slate-400 truncate mt-0.5">${ind.short}</div>
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+
+                const current = dashboardIndicators.find(function(i) { return i.id === selectedIndicatorId; }) || dashboardIndicators[0];
+                if (current) {
+                    const badge = document.getElementById('indBadge');
+                    const symbol = document.getElementById('indSymbol');
+                    const title = document.getElementById('indTitle');
+                    const verdict = document.getElementById('indVerdict');
+                    const action = document.getElementById('indAction');
+
+                    if (badge) {
+                        badge.textContent = current.colorBadge;
+                        badge.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full ' + (
+                            current.color === 'red' ? 'bg-red-500/20 text-red-300 border border-red-500/40' :
+                            current.color === 'yellow' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                            'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        );
+                    }
+                    if (symbol) symbol.textContent = current.symbol;
+                    if (title) title.textContent = current.title;
+                    if (verdict) {
+                        verdict.textContent = current.verdict;
+                        verdict.className = 'text-xs font-bold mt-0.5 ' + (
+                            current.color === 'red' ? 'text-red-400' :
+                            current.color === 'yellow' ? 'text-amber-300' :
+                            'text-emerald-400'
+                        );
+                    }
+                    if (action) action.textContent = current.action;
+                }
+            }
+
+            function renderDtpSteps() {
+                const container = document.getElementById('dtpStepsContainer');
+                if (!container) return;
+
+                container.innerHTML = dtpStepsState.map(function(step) {
+                    return `
+                        <label class="flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer transition ${step.done ? 'bg-emerald-950/30 border border-emerald-500/40 text-slate-400' : 'bg-[#0f1117] border border-slate-800 text-white'}">
+                            <input type="checkbox" data-dtp-id="${step.id}" class="dtp-step-toggle mt-0.5 w-4 h-4 accent-emerald-500 rounded shrink-0" ${step.done ? 'checked' : ''}>
+                            <div class="text-xs">
+                                <div class="font-bold ${step.done ? 'line-through text-emerald-300' : 'text-white'}">${step.title}</div>
+                                <div class="text-slate-400 mt-0.5">${step.detail}</div>
+                            </div>
+                        </label>
+                    `;
+                }).join('');
+            }
+
+            function evaluateEuroprotocol() {
+                const checks = {};
+                document.querySelectorAll('.euro-check').forEach(function(input) {
+                    checks[input.getAttribute('data-q')] = input.checked;
+                });
+                const box = document.getElementById('euroVerdictBox');
+                if (!box) return;
+
+                if (!checks.twoCars || !checks.noInjured || !checks.bothOsago) {
+                    box.className = 'p-3.5 rounded-xl bg-red-500/15 border border-red-500/40 text-xs space-y-1';
+                    box.innerHTML = `
+                        <div class="font-bold text-red-300 text-sm">🚓 Вызывайте ГИБДД по номеру 112 или 102!</div>
+                        <p class="text-slate-200">Европротокол НЕ действует, если пострадали люди, участвовало больше 2 машин, повреждено дорожное ограждение или хотя бы у одного водителя нет действующего ОСАГО.</p>
+                    `;
+                } else if (checks.noDispute) {
+                    box.className = 'p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-xs space-y-1';
+                    box.innerHTML = `
+                        <div class="font-bold text-emerald-300 text-sm">✅ Можно оформить Европротокол (лимит до 400 000 ₽)</div>
+                        <p class="text-slate-200">Все условия соблюдены! Оформите ДТП с фотофиксацией в приложении «Госуслуги Авто» (тогда лимит выплаты — до 400 000 ₽) или заполните бумажное извещение (без фотофиксации лимит — до 100 000 ₽).</p>
+                    `;
+                } else {
+                    box.className = 'p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs space-y-1';
+                    box.innerHTML = `
+                        <div class="font-bold text-amber-300 text-sm">⚠️ Европротокол с разногласиями (лимит до 100 000 ₽) или вызов ГИБДД</div>
+                        <p class="text-slate-200">При наличии споров о виновнике Европротокол возможен ТОЛЬКО с обязательной фотофиксацией через «Госуслуги Авто», и максимальная выплата составит 100 000 ₽. Если ущерб больше — вызывайте ГИБДД!</p>
+                    `;
+                }
+            }
+
+            function syncMyCarUI() {
+                const setText = function(id, val) {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = val;
+                };
+                setText('summaryCarModel', myCarState.model);
+                setText('summaryCarPlate', myCarState.plate);
+                setText('summaryFuelSide', myCarState.fuelSide);
+                setText('summaryFuelType', myCarState.fuelType);
+                setText('summaryTirePressure', myCarState.tirePressure);
+                setText('overlayOwnerPhone', myCarState.ownerPhone);
+                setText('overlayCarBadge', myCarState.model + ' • ' + myCarState.plate);
+
+                const setInput = function(id, val) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val;
+                };
+                setInput('inputCarModel', myCarState.model);
+                setInput('inputCarPlate', myCarState.plate);
+                setInput('inputFuelSide', myCarState.fuelSide);
+                setInput('inputFuelType', myCarState.fuelType);
+                setInput('inputTirePressure', myCarState.tirePressure);
+                setInput('inputEngineOil', myCarState.engineOil);
+                setInput('inputOsagoPolicy', myCarState.osagoPolicy);
+                setInput('inputOwnerPhone', myCarState.ownerPhone);
+                setInput('inputAssistancePhone', myCarState.assistancePhone);
+            }
+
+            function switchView(viewName) {
+                const views = {
+                    home: document.getElementById('viewHome'),
+                    dashboard: document.getElementById('viewDashboard'),
+                    sos: document.getElementById('viewSos'),
+                    mycar: document.getElementById('viewMyCar')
+                };
+
+                Object.keys(views).forEach(function(k) {
+                    if (views[k]) {
+                        if (k === viewName) {
+                            views[k].classList.remove('hidden');
+                        } else {
+                            views[k].classList.add('hidden');
+                        }
+                    }
+                });
+
+                document.querySelectorAll('.bottom-nav-btn').forEach(function(btn) {
+                    const target = btn.getAttribute('data-nav-target');
+                    if (target === viewName) {
+                        btn.classList.remove('text-slate-400', 'font-medium');
+                        btn.classList.add('text-blue-400', 'font-semibold', 'bg-blue-500/10');
+                    } else {
+                        btn.classList.add('text-slate-400', 'font-medium');
+                        btn.classList.remove('text-blue-400', 'font-semibold', 'bg-blue-500/10');
+                    }
+                });
+
+                const mainArea = document.getElementById('mainContentArea');
+                if (mainArea) mainArea.scrollTop = 0;
+            }
+
+            function updateInteractiveDiagramStep(guideId, stepNum) {
+                const carEl = document.getElementById('svgCar_' + guideId);
+                const capEl = document.getElementById('diagCaption_' + guideId);
+                if (!carEl || !capEl) return;
+
+                document.querySelectorAll('.diag-step-btn[data-diag-target="' + guideId + '"]').forEach(function(btn) {
+                    if (btn.getAttribute('data-diag-step') === String(stepNum)) {
+                        btn.className = 'diag-step-btn py-1.5 px-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold';
+                    } else {
+                        btn.className = 'diag-step-btn py-1.5 px-1.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold';
+                    }
+                });
+
+                if (guideId === 'c-roundabout') {
+                    if (stepNum === 1) {
+                        carEl.innerHTML = '<circle cx="132" cy="138" r="9" fill="#10b981"/><text x="132" y="142" text-anchor="middle" fill="#000" font-size="10" font-weight="bold">🚗</text>';
+                        capEl.innerHTML = '<strong class="text-emerald-400 block mb-1">Шаг 1: Въезд на кольцо</strong>Уступите тем, кто уже на кольце слева. Включите <strong>ПРАВЫЙ</strong> поворотник при заходе на круг.';
+                    } else if (stepNum === 2) {
+                        carEl.innerHTML = '<circle cx="152" cy="52" r="9" fill="#3b82f6"/><text x="152" y="56" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold">🚗</text>';
+                        capEl.innerHTML = '<strong class="text-blue-400 block mb-1">Шаг 2: Движение по дуге кольца</strong>Двигайтесь по своей полосе. Перед нужным съездом заранее перестройтесь во внешний правый ряд.';
+                    } else {
+                        carEl.innerHTML = '<circle cx="62" cy="58" r="9" fill="#f59e0b"/><text x="62" y="62" text-anchor="middle" fill="#000" font-size="10" font-weight="bold">🚗</text>';
+                        capEl.innerHTML = '<strong class="text-amber-400 block mb-1">Шаг 3: Съезд с кольца</strong>Съезжайте ТОЛЬКО из крайнего правого ряда с включенным <strong>ПРАВЫМ</strong> поворотником!';
+                    }
+                } else if (guideId === 'c-parallel-park') {
+                    if (stepNum === 1) {
+                        carEl.innerHTML = '<rect x="106" y="10" width="32" height="36" rx="5" fill="#10b981"/><text x="122" y="32" text-anchor="middle" fill="#000" font-size="8" font-weight="bold">ВЫ</text>';
+                        capEl.innerHTML = '<strong class="text-emerald-400 block mb-1">Шаг 1: Поравняться бамперами</strong>Остановитесь параллельно АВТО 1 в 50–70 см от него, задние бамперы на одной линии.';
+                    } else if (stepNum === 2) {
+                        carEl.innerHTML = '<g transform="rotate(-38 140 52)"><rect x="124" y="34" width="32" height="36" rx="5" fill="#3b82f6"/><text x="140" y="56" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">45°</text></g>';
+                        capEl.innerHTML = '<strong class="text-blue-400 block mb-1">Шаг 2: Руль вправо до упора</strong>Сдавайте назад под углом 45°, пока в ЛЕВОМ зеркале не увидите обе фары сзади стоящего АВТО 2.';
+                    } else if (stepNum === 3) {
+                        carEl.innerHTML = '<g transform="rotate(-25 154 65)"><rect x="138" y="47" width="32" height="36" rx="5" fill="#f59e0b"/><text x="154" y="69" text-anchor="middle" fill="#000" font-size="8" font-weight="bold">ПРЯМО</text></g>';
+                        capEl.innerHTML = '<strong class="text-amber-400 block mb-1">Шаг 3: Колеса прямо</strong>Поставьте руль ровно и сдавайте назад, пока правое зеркало не поравняется с задним фонарем АВТО 1.';
+                    } else {
+                        carEl.innerHTML = '<rect x="155" y="53" width="32" height="36" rx="5" fill="#10b981"/><text x="171" y="75" text-anchor="middle" fill="#000" font-size="8" font-weight="bold">ОК!</text>';
+                        capEl.innerHTML = '<strong class="text-emerald-400 block mb-1">Шаг 4: Руль влево до упора</strong>Выкрутите руль влево и плавно заведите переднюю часть машины в парковочный карман!';
+                    }
+                }
+            }
+
+            function copyTextSafe(text, successMsg) {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function() {
+                            showToast(successMsg);
+                        }).catch(function() {
+                            fallbackCopy(text, successMsg);
+                        });
+                    } else {
+                        fallbackCopy(text, successMsg);
+                    }
+                } catch (e) {
+                    fallbackCopy(text, successMsg);
+                }
+            }
+
+            function fallbackCopy(text, successMsg) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                } catch (e) {}
+                document.body.removeChild(ta);
+                showToast(successMsg);
+            }
+
+            function initApp() {
+                renderChecklist();
+                renderGuidesList();
+                renderDashboardIndicators();
+                renderDtpSteps();
+                evaluateEuroprotocol();
+                syncMyCarUI();
+
+                document.querySelectorAll('.bottom-nav-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const target = btn.getAttribute('data-nav-target');
+                        switchView(target);
+                    });
+                });
+
+                document.querySelectorAll('.cat-filter-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const cat = btn.getAttribute('data-cat-btn');
+                        currentCategoryFilter = (currentCategoryFilter === cat) ? 'all' : cat;
+                        renderGuidesList();
+                        const listEl = document.getElementById('guidesSectionTitle');
+                        if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                });
+
+                const btnResetCat = document.getElementById('btnResetCategoryFilter');
+                if (btnResetCat) {
+                    btnResetCat.addEventListener('click', function() {
+                        currentCategoryFilter = 'all';
+                        currentSearchQuery = '';
+                        const sInput = document.getElementById('globalSearchInput');
+                        const clearBtn = document.getElementById('btnClearSearch');
+                        if (sInput) sInput.value = '';
+                        if (clearBtn) clearBtn.classList.add('hidden');
+                        renderGuidesList();
+                    });
+                }
+
+                const searchInput = document.getElementById('globalSearchInput');
+                const btnClearSearch = document.getElementById('btnClearSearch');
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        currentSearchQuery = searchInput.value;
+                        if (btnClearSearch) {
+                            if (currentSearchQuery.length > 0) {
+                                btnClearSearch.classList.remove('hidden');
+                            } else {
+                                btnClearSearch.classList.add('hidden');
+                            }
+                        }
+                        switchView('home');
+                        renderGuidesList();
+                    });
+                }
+                if (btnClearSearch) {
+                    btnClearSearch.addEventListener('click', function() {
+                        currentSearchQuery = '';
+                        if (searchInput) searchInput.value = '';
+                        btnClearSearch.classList.add('hidden');
+                        renderGuidesList();
+                    });
+                }
+
+                const mainArea = document.getElementById('mainContentArea');
+                if (mainArea) {
+                    mainArea.addEventListener('click', function(e) {
+                        const headerBtn = e.target.closest('.guide-header-btn');
+                        if (headerBtn) {
+                            const gId = headerBtn.getAttribute('data-guide-toggle');
+                            const body = document.getElementById('guideBody_' + gId);
+                            const arrow = document.getElementById('guideArrow_' + gId);
+                            if (body) {
+                                const isHidden = body.classList.contains('hidden');
+                                body.classList.toggle('hidden');
+                                if (arrow) arrow.textContent = isHidden ? '▲' : '▼';
+                            }
+                            return;
+                        }
+
+                        const diagBtn = e.target.closest('.diag-step-btn');
+                        if (diagBtn) {
+                            const gId = diagBtn.getAttribute('data-diag-target');
+                            const stepNum = parseInt(diagBtn.getAttribute('data-diag-step'), 10);
+                            updateInteractiveDiagramStep(gId, stepNum);
+                            return;
+                        }
+
+                        const indBtn = e.target.closest('.ind-card-btn');
+                        if (indBtn) {
+                            selectedIndicatorId = indBtn.getAttribute('data-ind-id');
+                            renderDashboardIndicators();
+                            return;
+                        }
+                    });
+
+                    mainArea.addEventListener('change', function(e) {
+                        if (e.target.classList.contains('checklist-toggle')) {
+                            const id = e.target.getAttribute('data-check-id');
+                            checklistState = checklistState.map(function(item) {
+                                if (item.id === id) return { id: item.id, text: item.text, done: e.target.checked };
+                                return item;
+                            });
+                            safeSetStorage('bp_checklist_v2', checklistState);
+                            renderChecklist();
+                            const allDone = checklistState.every(function(i) { return i.done; });
+                            if (allDone) showToast('Отлично! Все 8 пунктов проверены — счастливого пути!');
+                            return;
+                        }
+
+                        if (e.target.classList.contains('dtp-step-toggle')) {
+                            const id = e.target.getAttribute('data-dtp-id');
+                            dtpStepsState = dtpStepsState.map(function(st) {
+                                if (st.id === id) return { id: st.id, title: st.title, detail: st.detail, done: e.target.checked };
+                                return st;
+                            });
+                            safeSetStorage('bp_dtp_steps_v2', dtpStepsState);
+                            renderDtpSteps();
+                            return;
+                        }
+
+                        if (e.target.classList.contains('euro-check')) {
+                            evaluateEuroprotocol();
+                            return;
+                        }
+                    });
+                }
+
+                const btnResetChecklist = document.getElementById('btnResetChecklist');
+                if (btnResetChecklist) {
+                    btnResetChecklist.addEventListener('click', function() {
+                        checklistState = defaultChecklist.map(function(i) {
+                            return { id: i.id, text: i.text, done: false };
+                        });
+                        safeSetStorage('bp_checklist_v2', checklistState);
+                        renderChecklist();
+                        showToast('Чек-лист перед выездом сброшен');
+                    });
+                }
+
+                const btnResetDtp = document.getElementById('btnResetDtpSteps');
+                if (btnResetDtp) {
+                    btnResetDtp.addEventListener('click', function() {
+                        dtpStepsState = defaultDtpSteps.map(function(s) {
+                            return { id: s.id, title: s.title, detail: s.detail, done: false };
+                        });
+                        safeSetStorage('bp_dtp_steps_v2', dtpStepsState);
+                        renderDtpSteps();
+                        showToast('Шаги алгоритма ДТП сброшены');
+                    });
+                }
+
+                document.querySelectorAll('.dash-filter-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        currentDashFilter = btn.getAttribute('data-dash-filter');
+                        renderDashboardIndicators();
+                    });
+                });
+
+                const btnQuickChecklist = document.getElementById('btnQuickChecklist');
+                if (btnQuickChecklist) {
+                    btnQuickChecklist.addEventListener('click', function() {
+                        switchView('home');
+                        const box = document.getElementById('checklistWidgetBox');
+                        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                }
+
+                const btnQuickDashboard = document.getElementById('btnQuickDashboard');
+                if (btnQuickDashboard) {
+                    btnQuickDashboard.addEventListener('click', function() {
+                        switchView('dashboard');
+                    });
+                }
+
+                const btnQuickEuro = document.getElementById('btnQuickEuroprotocol');
+                if (btnQuickEuro) {
+                    btnQuickEuro.addEventListener('click', function() {
+                        switchView('sos');
+                        const eq = document.getElementById('euroQuestionsList');
+                        if (eq) eq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                }
+
+                const btnGoToMyCar = document.getElementById('btnGoToMyCar');
+                if (btnGoToMyCar) {
+                    btnGoToMyCar.addEventListener('click', function() {
+                        switchView('mycar');
+                    });
+                }
+
+                const btnEmergencyQuick = document.getElementById('btnEmergencyQuick');
+                if (btnEmergencyQuick) {
+                    btnEmergencyQuick.addEventListener('click', function() {
+                        switchView('sos');
+                    });
+                }
+
+                const myCarForm = document.getElementById('myCarForm');
+                if (myCarForm) {
+                    myCarForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        myCarState = {
+                            model: document.getElementById('inputCarModel').value || 'Мой автомобиль',
+                            plate: document.getElementById('inputCarPlate').value || '—',
+                            fuelSide: document.getElementById('inputFuelSide').value,
+                            fuelType: document.getElementById('inputFuelType').value,
+                            tirePressure: document.getElementById('inputTirePressure').value || '2.2 бар',
+                            engineOil: document.getElementById('inputEngineOil').value || '5W-30',
+                            osagoPolicy: document.getElementById('inputOsagoPolicy').value || '—',
+                            ownerPhone: document.getElementById('inputOwnerPhone').value || '+7 (999) 000-00-00',
+                            assistancePhone: document.getElementById('inputAssistancePhone').value || '112'
+                        };
+                        safeSetStorage('bp_mycar_v2', myCarState);
+                        syncMyCarUI();
+                        showToast('Данные вашего автомобиля сохранены в памяти!');
+                    });
+                }
+
+                const parkingOverlay = document.getElementById('parkingCardOverlay');
+                const openParkingFn = function() {
+                    syncMyCarUI();
+                    if (parkingOverlay) parkingOverlay.classList.remove('hidden');
+                };
+                const btnParkingQuick = document.getElementById('btnParkingCardQuick');
+                const btnOpenParkingFull = document.getElementById('btnOpenParkingFullscreen');
+                const btnCloseParking = document.getElementById('btnCloseParkingOverlay');
+                if (btnParkingQuick) btnParkingQuick.addEventListener('click', openParkingFn);
+                if (btnOpenParkingFull) btnOpenParkingFull.addEventListener('click', openParkingFn);
+                if (btnCloseParking) {
+                    btnCloseParking.addEventListener('click', function() {
+                        if (parkingOverlay) parkingOverlay.classList.add('hidden');
+                    });
+                }
+
+                const strobeOverlay = document.getElementById('strobeOverlay');
+                const openStrobeFn = function() {
+                    if (strobeOverlay) strobeOverlay.classList.remove('hidden');
+                };
+                const btnQuickStrobe = document.getElementById('btnQuickStrobe');
+                const btnToggleStrobe = document.getElementById('btnToggleStrobe');
+                const btnCloseStrobe = document.getElementById('btnCloseStrobeOverlay');
+                if (btnQuickStrobe) btnQuickStrobe.addEventListener('click', openStrobeFn);
+                if (btnToggleStrobe) btnToggleStrobe.addEventListener('click', openStrobeFn);
+                if (btnCloseStrobe) {
+                    btnCloseStrobe.addEventListener('click', function() {
+                        if (strobeOverlay) strobeOverlay.classList.add('hidden');
+                    });
+                }
+
+                const btnCopy112 = document.getElementById('btnCopy112Script');
+                if (btnCopy112) {
+                    btnCopy112.addEventListener('click', function() {
+                        const scriptText = 'Здравствуйте! Произошло ДТП по адресу: [улица, ориентир]. Пострадавших: [нет / есть]. Участников: 2 автомобиля, мой госномер ' + myCarState.plate + ' (' + myCarState.model + '). Требуется наряд ГИБДД.';
+                        copyTextSafe(scriptText, 'Шаблон обращения в 112 скопирован в буфер!');
+                    });
+                }
+
+                const btnToggleFrame = document.getElementById('btnToggleFrame');
+                const appShell = document.getElementById('appShell');
+                let isWideFrame = false;
+                if (btnToggleFrame && appShell) {
+                    btnToggleFrame.addEventListener('click', function() {
+                        isWideFrame = !isWideFrame;
+                        if (isWideFrame) {
+                            appShell.classList.remove('max-w-md');
+                            appShell.classList.add('max-w-4xl');
+                            showToast('Включен широкий режим (Планшет / Мультимедиа авто)');
+                        } else {
+                            appShell.classList.add('max-w-md');
+                            appShell.classList.remove('max-w-4xl');
+                            showToast('Включен режим экрана смартфона Android');
+                        }
+                    });
+                }
+
+                const commModal = document.getElementById('commercialModal');
+                const btnOpenComm = document.getElementById('btnOpenCommercialModal');
+                const btnCloseComm1 = document.getElementById('btnCloseCommercialModal');
+                const btnCloseComm2 = document.getElementById('btnCloseCommercialModalBottom');
+                if (btnOpenComm && commModal) {
+                    btnOpenComm.addEventListener('click', function() {
+                        commModal.classList.remove('hidden');
+                    });
+                }
+                [btnCloseComm1, btnCloseComm2].forEach(function(b) {
+                    if (b && commModal) {
+                        b.addEventListener('click', function() {
+                            commModal.classList.add('hidden');
+                        });
+                    }
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initApp);
+            } else {
+                initApp();
+            }
+        })();
+    </script>
+</body>
+</html>

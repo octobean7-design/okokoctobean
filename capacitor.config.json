@@ -1,0 +1,6 @@
+{
+  "appId": "ru.bezpaniki.driver",
+  "appName": "Без паники",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
