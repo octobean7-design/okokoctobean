@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bez-paniki-pro-v2.8';
+const CACHE_NAME = 'bez-paniki-pro-v2.9';
 const ASSETS = ['./', './index.html', './manifest.json'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));

@@ -55,8 +55,21 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (webView != null && webView.canGoBack()) {
-                    webView.goBack();
+                if (webView != null) {
+                    webView.evaluateJavascript(
+                        "(function() { return Boolean(window.__handleAndroidBack && window.__handleAndroidBack()); })()",
+                        value -> {
+                            if ("true".equals(value)) {
+                                return;
+                            }
+                            if (webView.canGoBack()) {
+                                webView.goBack();
+                            } else {
+                                setEnabled(false);
+                                getOnBackPressedDispatcher().onBackPressed();
+                            }
+                        }
+                    );
                 } else {
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();

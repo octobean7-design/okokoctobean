@@ -83,7 +83,7 @@
     </div>
 
     <!-- Главный контейнер приложения -->
-    <div id="appShell" class="w-full max-w-md sm:rounded-[28px] bg-[#0f1117] android-shadow border border-[#242938] flex flex-col min-h-[calc(100vh-3rem)] sm:min-h-[780px] relative overflow-hidden transition-all duration-200">
+    <div id="appShell" class="w-full max-w-md sm:rounded-[28px] bg-[#0f1117] android-shadow border border-[#242938] flex flex-col min-h-screen sm:min-h-[780px] relative overflow-x-hidden pb-20 transition-all duration-200">
 
         <!-- Имитация статус-бара Android -->
         <div class="px-5 pt-2.5 pb-1.5 bg-[#0f1117] flex items-center justify-between text-[11px] text-slate-400 select-none border-b border-slate-800/60">
@@ -484,8 +484,8 @@
 
         </main>
 
-        <!-- Нижняя панель навигации Android -->
-        <nav class="bg-[#141821]/95 backdrop-blur border-t border-[#242938] px-2 py-1.5 flex items-center justify-around sticky bottom-0 z-20">
+        <!-- Нижняя панель навигации Android (всплывающая при скролле и закрепленная внизу экрана) -->
+        <nav id="bottomNavBar" class="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md bg-[#141821]/95 backdrop-blur-md border-t border-[#2a3246] px-2 py-1.5 flex items-center justify-around z-30 shadow-[0_-8px_30px_rgba(0,0,0,0.65)] transition-transform duration-300 ease-out">
             <button type="button" data-nav-target="home" class="bottom-nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-xl text-blue-400 font-semibold bg-blue-500/10 text-[11px] gap-0.5">
                 <span class="text-lg leading-none">🧭</span>
                 <span>Ситуации</span>
@@ -505,7 +505,7 @@
         </nav>
 
         <!-- Полноэкранный оверлей: Парковочная визитка -->
-        <div id="parkingCardOverlay" class="hidden absolute inset-0 z-40 bg-[#0b0d13] flex flex-col justify-between p-6 text-center select-none">
+        <div id="parkingCardOverlay" class="hidden fixed inset-0 z-40 bg-[#0b0d13] flex flex-col justify-between p-6 text-center select-none">
             <div class="flex items-center justify-between">
                 <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/40">🅿️ ПАРКОВОЧНАЯ ВИЗИТКА</span>
                 <button id="btnCloseParkingOverlay" type="button" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold border border-slate-700">
@@ -527,7 +527,7 @@
         </div>
 
         <!-- Полноэкранный оверлей: Аварийный маячок-стробоскоп -->
-        <div id="strobeOverlay" class="hidden absolute inset-0 z-50 strobe-active flex flex-col items-center justify-between p-6 text-center">
+        <div id="strobeOverlay" class="hidden fixed inset-0 z-50 strobe-active flex flex-col items-center justify-between p-6 text-center">
             <div class="w-full flex justify-end">
                 <button id="btnCloseStrobeOverlay" type="button" class="px-4 py-2 rounded-xl bg-black/80 text-white text-sm font-bold border border-white/30">
                     ✕ Выключить маячок
@@ -544,7 +544,7 @@
         </div>
 
         <!-- Модальное окно инструкции по сборке Android APK / RuStore -->
-        <div id="commercialModal" class="hidden absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div id="commercialModal" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div class="bg-[#181b24] border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-3 max-h-[90%] overflow-y-auto">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base font-bold text-white">📦 Коммерческий релиз на Android</h3>
@@ -574,7 +574,7 @@
         </div>
 
         <!-- Всплывающий тост -->
-        <div id="toastNotification" class="hidden absolute bottom-16 left-4 right-4 z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center justify-between">
+        <div id="toastNotification" class="hidden fixed bottom-20 left-4 right-4 max-w-md mx-auto z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center justify-between">
             <span id="toastMessageText">Сохранено!</span>
             <span>✓</span>
         </div>
@@ -1058,6 +1058,26 @@
             let currentSearchQuery = '';
             let currentDashFilter = 'all';
             let selectedIndicatorId = 'ind-oil';
+            let currentViewName = 'home';
+            let navHistoryStack = [];
+            let lastOpenedGuideId = null;
+            let isHandlingPopState = false;
+
+            function pushAppHistory(actionObj) {
+                navHistoryStack.push(actionObj);
+                if (!isHandlingPopState && window.history && window.history.pushState) {
+                    try {
+                        window.history.pushState({ bpStep: navHistoryStack.length }, '');
+                    } catch (e) {}
+                }
+            }
+
+            function showBottomNav() {
+                const nav = document.getElementById('bottomNavBar');
+                if (nav) {
+                    nav.style.transform = 'translateY(0)';
+                }
+            }
 
             function buildInteractiveDiagramHtml(type, guideId) {
                 if (type === 'roundabout') {
@@ -1419,7 +1439,12 @@
                 setInput('inputAssistancePhone', myCarState.assistancePhone);
             }
 
-            function switchView(viewName) {
+            function switchView(viewName, skipHistory) {
+                if (!skipHistory && viewName !== currentViewName) {
+                    pushAppHistory({ type: 'view', from: currentViewName });
+                }
+                currentViewName = viewName;
+
                 const views = {
                     home: document.getElementById('viewHome'),
                     dashboard: document.getElementById('viewDashboard'),
@@ -1450,6 +1475,8 @@
 
                 const mainArea = document.getElementById('mainContentArea');
                 if (mainArea) mainArea.scrollTop = 0;
+                try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+                showBottomNav();
             }
 
             function updateInteractiveDiagramStep(guideId, stepNum) {
@@ -1541,10 +1568,15 @@
                 document.querySelectorAll('.cat-filter-btn').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         const cat = btn.getAttribute('data-cat-btn');
-                        currentCategoryFilter = (currentCategoryFilter === cat) ? 'all' : cat;
+                        const nextCat = (currentCategoryFilter === cat) ? 'all' : cat;
+                        if (nextCat !== currentCategoryFilter) {
+                            pushAppHistory({ type: 'category', prevCat: currentCategoryFilter });
+                        }
+                        currentCategoryFilter = nextCat;
                         renderGuidesList();
                         const listEl = document.getElementById('guidesSectionTitle');
                         if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        showBottomNav();
                     });
                 });
 
@@ -1598,7 +1630,12 @@
                                 const isHidden = body.classList.contains('hidden');
                                 body.classList.toggle('hidden');
                                 if (arrow) arrow.textContent = isHidden ? '▲' : '▼';
+                                if (isHidden) {
+                                    lastOpenedGuideId = gId;
+                                    pushAppHistory({ type: 'guide', guideId: gId });
+                                }
                             }
+                            showBottomNav();
                             return;
                         }
 
@@ -1744,7 +1781,10 @@
                 const parkingOverlay = document.getElementById('parkingCardOverlay');
                 const openParkingFn = function() {
                     syncMyCarUI();
-                    if (parkingOverlay) parkingOverlay.classList.remove('hidden');
+                    if (parkingOverlay) {
+                        parkingOverlay.classList.remove('hidden');
+                        pushAppHistory({ type: 'overlay', id: 'parkingCardOverlay' });
+                    }
                 };
                 const btnParkingQuick = document.getElementById('btnParkingCardQuick');
                 const btnOpenParkingFull = document.getElementById('btnOpenParkingFullscreen');
@@ -1759,7 +1799,10 @@
 
                 const strobeOverlay = document.getElementById('strobeOverlay');
                 const openStrobeFn = function() {
-                    if (strobeOverlay) strobeOverlay.classList.remove('hidden');
+                    if (strobeOverlay) {
+                        strobeOverlay.classList.remove('hidden');
+                        pushAppHistory({ type: 'overlay', id: 'strobeOverlay' });
+                    }
                 };
                 const btnQuickStrobe = document.getElementById('btnQuickStrobe');
                 const btnToggleStrobe = document.getElementById('btnToggleStrobe');
@@ -1782,6 +1825,7 @@
 
                 const btnToggleFrame = document.getElementById('btnToggleFrame');
                 const appShell = document.getElementById('appShell');
+                const bottomNavBar = document.getElementById('bottomNavBar');
                 let isWideFrame = false;
                 if (btnToggleFrame && appShell) {
                     btnToggleFrame.addEventListener('click', function() {
@@ -1789,10 +1833,18 @@
                         if (isWideFrame) {
                             appShell.classList.remove('max-w-md');
                             appShell.classList.add('max-w-4xl');
+                            if (bottomNavBar) {
+                                bottomNavBar.classList.remove('max-w-md');
+                                bottomNavBar.classList.add('max-w-4xl');
+                            }
                             showToast('Включен широкий режим (Планшет / Мультимедиа авто)');
                         } else {
                             appShell.classList.add('max-w-md');
                             appShell.classList.remove('max-w-4xl');
+                            if (bottomNavBar) {
+                                bottomNavBar.classList.add('max-w-md');
+                                bottomNavBar.classList.remove('max-w-4xl');
+                            }
                             showToast('Включен режим экрана смартфона Android');
                         }
                     });
@@ -1805,6 +1857,7 @@
                 if (btnOpenComm && commModal) {
                     btnOpenComm.addEventListener('click', function() {
                         commModal.classList.remove('hidden');
+                        pushAppHistory({ type: 'overlay', id: 'commercialModal' });
                     });
                 }
                 [btnCloseComm1, btnCloseComm2].forEach(function(b) {
@@ -1813,6 +1866,126 @@
                             commModal.classList.add('hidden');
                         });
                     }
+                });
+
+                // Всплытие нижней панели при скролле экрана
+                let lastScrollY = window.scrollY || 0;
+                let scrollPopTimer = null;
+                function handleScrollPop() {
+                    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+                    const delta = currentY - lastScrollY;
+                    if (bottomNavBar) {
+                        if (delta > 14 && currentY > 120) {
+                            // При быстрой прокрутке вниз слегка припускаем панель, чтобы не загораживать чтение
+                            bottomNavBar.style.transform = 'translateY(100%)';
+                        } else if (delta < -4 || currentY <= 80) {
+                            // При любом движении вверх или у верха страницы мгновенно всплывает
+                            bottomNavBar.style.transform = 'translateY(0)';
+                        }
+                        if (scrollPopTimer) clearTimeout(scrollPopTimer);
+                        scrollPopTimer = setTimeout(function() {
+                            // Автоматически всплывает сразу после остановки пальца при скролле
+                            bottomNavBar.style.transform = 'translateY(0)';
+                        }, 280);
+                    }
+                    lastScrollY = currentY;
+                }
+                window.addEventListener('scroll', handleScrollPop, { passive: true });
+                if (mainArea) {
+                    mainArea.addEventListener('scroll', showBottomNav, { passive: true });
+                }
+
+                // Обработчик системной кнопки «Назад» (Android Back Button / Gesture & Browser History)
+                function executeBackStep() {
+                    // 1. Закрыть активные полноэкранные окна / модалки
+                    if (strobeOverlay && !strobeOverlay.classList.contains('hidden')) {
+                        strobeOverlay.classList.add('hidden');
+                        showBottomNav();
+                        return true;
+                    }
+                    if (parkingOverlay && !parkingOverlay.classList.contains('hidden')) {
+                        parkingOverlay.classList.add('hidden');
+                        showBottomNav();
+                        return true;
+                    }
+                    if (commModal && !commModal.classList.contains('hidden')) {
+                        commModal.classList.add('hidden');
+                        showBottomNav();
+                        return true;
+                    }
+
+                    // 2. Очистить поисковый запрос, если он введен
+                    if (currentSearchQuery && currentSearchQuery.trim() !== '') {
+                        currentSearchQuery = '';
+                        if (searchInput) searchInput.value = '';
+                        if (btnClearSearch) btnClearSearch.classList.add('hidden');
+                        renderGuidesList();
+                        showBottomNav();
+                        return true;
+                    }
+
+                    // 3. Проверить стек действий (развернутая карточка, выбранная категория, предыдущая вкладка)
+                    while (navHistoryStack.length > 0) {
+                        const lastAction = navHistoryStack.pop();
+                        if (!lastAction) continue;
+
+                        if (lastAction.type === 'guide' && lastAction.guideId) {
+                            const body = document.getElementById('guideBody_' + lastAction.guideId);
+                            const arrow = document.getElementById('guideArrow_' + lastAction.guideId);
+                            if (body && !body.classList.contains('hidden')) {
+                                body.classList.add('hidden');
+                                if (arrow) arrow.textContent = '▼';
+                                showBottomNav();
+                                return true;
+                            }
+                        } else if (lastAction.type === 'category') {
+                            if (currentCategoryFilter !== 'all') {
+                                currentCategoryFilter = 'all';
+                                renderGuidesList();
+                                showBottomNav();
+                                return true;
+                            }
+                        } else if (lastAction.type === 'view' && lastAction.from) {
+                            if (currentViewName !== lastAction.from) {
+                                switchView(lastAction.from, true);
+                                return true;
+                            }
+                        }
+                    }
+
+                    // 4. Если открыта не главная вкладка — вернуться на главный экран «Ситуации»
+                    if (currentViewName !== 'home') {
+                        switchView('home', true);
+                        return true;
+                    }
+
+                    // 5. Если включен фильтр категории на главной — сбросить его
+                    if (currentCategoryFilter !== 'all') {
+                        currentCategoryFilter = 'all';
+                        renderGuidesList();
+                        showBottomNav();
+                        return true;
+                    }
+
+                    // 6. Если экран прокручен далеко вниз — плавно вернуть наверх
+                    const curScroll = window.scrollY || document.documentElement.scrollTop || 0;
+                    if (curScroll > 260) {
+                        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+                        showBottomNav();
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                window.__handleAndroidBack = function() {
+                    return executeBackStep();
+                };
+
+                window.addEventListener('popstate', function() {
+                    isHandlingPopState = true;
+                    executeBackStep();
+                    isHandlingPopState = false;
                 });
             }
 
